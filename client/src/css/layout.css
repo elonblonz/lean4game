@@ -11,6 +11,11 @@ html, body {
   flex-direction: column;
 }
 
+/* The visible height, kept up to date in `utils/viewport.ts` (URL bar, on-screen keyboard). */
+#root {
+  height: var(--app-height, 100vh);
+}
+
 .app-bar {
   flex-shrink: 0;
   background: var(--clr-primary);

@@ -44,6 +44,14 @@
   margin-top: 0;
 }
 
+/* iOS zooms into inputs with a font smaller than 16px when they get focus. Monaco's hidden
+   textarea is what gets focus, so enlarging it doesn't change what is shown. */
+@media (pointer: coarse) {
+  .typewriter-input textarea, .codeview textarea {
+    font-size: 16px !important;
+  }
+}
+
 .pusher {
   flex: 1;
   min-height: 0;

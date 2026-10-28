@@ -11,6 +11,7 @@ import { useAtom } from 'jotai'
 import { gameIdAtom, hashSegmentsAtom, levelIdAtom, pathSegmentsAtom, redirectAtom, worldIdAtom } from './store/location-atoms'
 import { ErrorBoundary } from './error/ErrorBoundary'
 import { NotFound } from './error/NotFound'
+import { trackAppHeight } from './utils/viewport'
 
 function Router() {
   const [gameId] = useAtom(gameIdAtom)
@@ -50,6 +51,8 @@ function Router() {
 
 
 
+
+trackAppHeight()
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
