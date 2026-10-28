@@ -98,7 +98,6 @@ const server = app
     const repo = req.params.repo
     const filename = req.params.path.join('/');
     req.url = filename;
-    console.debug(gameManager.getGameDir(owner,repo))
     const staticHandler = express.static(
       path.join(gameManager.getGameDir(owner,repo),".lake","gamedata"),
       { fallthrough: true }

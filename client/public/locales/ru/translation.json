@@ -142,6 +142,7 @@
   "Introduction": "Введение",
   "Retry proof from here": "Повторить доказательство отсюда",
   "Retry": "Повторить",
+  "Undo": "Отменить",
   "Failed command": "Ошибка при выполнении команды",
   "view the Lean game server on Github": "посмотреть Lean Game Server на GitHub",
   "Impressum": "Юридическая информация",

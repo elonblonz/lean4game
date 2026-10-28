@@ -10,11 +10,6 @@ import { editor } from 'monaco-editor'
 import { codeAtom, deleteCodeFromLineAtom, lastProofStepHasErrorsAtom } from "../../../../store/editor-atoms"
 import { Button } from "../../../button"
 
-//FIXME: implement
-function isLastStepWithErrors(x: any, y: any) {
-  return false
-}
-
 /** The display of a single entered lean command */
 export function Command({ proof, i }: { proof: ProofState, i: number }) {
   let {t} = useTranslation()
@@ -27,8 +22,8 @@ export function Command({ proof, i }: { proof: ProofState, i: number }) {
   // The first step will always have an empty command
   if (!proof.steps[i]?.command) { return <></> }
 
-  //if (isLastStepWithErrors(proof, i))
-  if (lastProofStepHasErrors){
+  // Only the last command can be the failed one; the commands before it were accepted.
+  if (lastProofStepHasErrors && i == proof.steps.length - 1) {
     // If the last step has errors, we display the command in a different style
     // indicating that it will be removed on the next try.
     return <div className="failed-command">
@@ -41,7 +36,7 @@ export function Command({ proof, i }: { proof: ProofState, i: number }) {
         deleteCodeFromLine(i-1)
         ev.stopPropagation()
       }}>
-        <FontAwesomeIcon icon={faDeleteLeft} />&nbsp;{t("Retry")}
+        <FontAwesomeIcon icon={faDeleteLeft} />&nbsp;{t("Undo")}
       </Button>
     </div>
   }

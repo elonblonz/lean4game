@@ -7,7 +7,7 @@ import { gameIdAtom, levelIdAtom, worldIdAtom } from "../../store/location-atoms
 import { mobileAtom } from "../../store/preferences-atoms"
 import { gameInfoAtom, levelInfoAtom } from "../../store/query-atoms"
 import { LeanMonacoEditor, RpcSessionAtPos } from "lean4monaco"
-import { RpcConnectParams } from "@leanprover/infoview-api"
+import { LeanFileProgressProcessingInfo, RpcConnectParams } from "@leanprover/infoview-api"
 import { CircularProgress } from "@mui/material"
 import { LevelAppBar } from "../app_bar"
 import React from "react"
@@ -133,13 +133,26 @@ export function PlayableLevel() {
 
   // If Lean no longer knows our RPC session (e.g. the server restarted the file worker),
   // drop it so that the effect above connects a new one.
-  const [{ error: proofError }] = useAtom(proofQueryAtom)
+  const [{ error: proofError, refetch: refetchProof }] = useAtom(proofQueryAtom)
   useEffect(() => {
     if ((proofError as any)?.code === RPC_NEEDS_RECONNECT) {
       console.debug('rpc session outdated, reconnecting')
       setRpcSess(undefined)
     }
   }, [proofError])
+
+  // Ask for the proof state again once Lean has finished checking the file. Asking only
+  // when the code changes can be answered before Lean has processed the new code, which
+  // leaves the previous proof state on screen.
+  useEffect(() => {
+    if (!client || !uri) return
+    const disposable = client.progressChanged(([fileUri, processing]: [string, LeanFileProgressProcessingInfo[]]) => {
+      if (processing.length == 0 && decodeURIComponent(fileUri) == decodeURIComponent(uri.toString())) {
+        refetchProof()
+      }
+    })
+    return () => disposable.dispose()
+  }, [client, uri, refetchProof])
 
   // Select and highlight proof steps and corresponding hints
   // TODO: with the new design, there is no difference between the introduction and

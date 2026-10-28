@@ -109,6 +109,7 @@
   "Introduction": "Prolog",
   "Retry proof from here": "Ab hier neu ansetzen",
   "Retry": "Noch einmal",
+  "Undo": "Rückgängig",
   "Failed command": "Gescheiterter Befehl",
   "<0>Most aspects of the games and the infrastructure are still in development. Feel free to file a <1>GitHub Issue</1> about any problems you experience!</0>": "Der Spieleserver und die alle Spiele befinden sich in fortlaufender Entwicklung.  Wir bitten darum, Fehler und Ungereimtheiten als <1>GitHub Issue</1> zu melden.",
   "RAM": "RAM",

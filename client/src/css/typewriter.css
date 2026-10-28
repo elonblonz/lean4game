@@ -60,7 +60,13 @@
   width: 100%;
 }
 
+/* Part of the layout rather than a backdrop: a diagram is content, so the proof scrolls
+   past it instead of covering it. */
 .world-image.contain {
+  position: static;
+  display: block;
+  flex-shrink: 0;
+  max-height: 45vh;
   object-fit: contain;
 }
 

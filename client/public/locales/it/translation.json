@@ -63,6 +63,7 @@
   "Failed command": "Comando fallito",
   "Retry proof from here": "Riprendi la dimostrazione da qui",
   "Retry": "Ritenta",
+  "Undo": "Annulla",
   "Active Goal": "Goal corrente",
   "Crashed! Go to editor mode and fix your proof! Last server response:": "Server crashato! Rientra in modalità editor e aggiusta la tua dimostrazione. Ultimo messaggio del server:",
   "Line": "Linea",

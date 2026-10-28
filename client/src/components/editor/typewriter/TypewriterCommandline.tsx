@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { useAtom } from "jotai";
 import * as monaco from 'monaco-editor'
-import { typewriterContentAtom, codeAtom, modelAtom, appendCodeLineAtom } from "../../../store/editor-atoms";
+import { typewriterContentAtom, codeAtom, modelAtom, appendCodeLineAtom, lastProofStepErrorCommandAtom, proofAtom } from "../../../store/editor-atoms";
 import { twMerge } from "tailwind-merge";
 import { deletedChatAtom } from "../../../store/chat-atoms";
 import { oneLineEditorAtom } from "./typewriter-atoms";
@@ -20,6 +20,8 @@ export function TypewriterCommandLine() {
   const [, appendLine] = useAtom(appendCodeLineAtom)
   const [, setDeletedChatAtom] = useAtom(deletedChatAtom)
   const [typewriter, setTypewriter] = useAtom(typewriterContentAtom)
+  const [failedCommand] = useAtom(lastProofStepErrorCommandAtom)
+  const [proof] = useAtom(proofAtom)
   const oneLineEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
 
@@ -142,6 +144,17 @@ export function TypewriterCommandLine() {
       setOneLineEditor(null)
     }
   }, [setTypewriter, setOneLineEditor])
+
+  // Put a failed command back into the input so it can be corrected rather than retyped
+  // (it is replaced when the next command is submitted). Don't overwrite anything typed since,
+  // and ignore a proof state that is still Lean's answer for the previous code.
+  useEffect(() => {
+    if (!failedCommand || !oneLineEditor || oneLineEditor.getValue().trim()) return
+    const lastLine = code?.trimEnd().split('\n').pop()?.trim()
+    if (lastLine != failedCommand.trim()) return
+    oneLineEditor.setValue(failedCommand)
+    oneLineEditor.setPosition({ lineNumber: 1, column: failedCommand.length + 1 })
+  }, [proof, failedCommand, oneLineEditor, code])
 
   // Handle keyboard events (i.e. "Enter")
   useEffect(() => {

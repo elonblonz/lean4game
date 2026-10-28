@@ -80,11 +80,21 @@ export const codeAtom = atom(
   }
 )
 
-/** Appends a new line of code at the end of the current code */
+/** Appends a new line of code at the end of the current code.
+ *
+ * If the last command failed, it is replaced instead: otherwise Lean's error recovery
+ * counts the failed command as having closed the goal, and the new command would then
+ * fail with "no goals".
+*/
 export const appendCodeLineAtom = atom(null, (get, set, line: string) => {
   const code = get(codeAtom)
 
-  const oldCode = code?.trimEnd() ?? ''
+  let lines = (code?.trimEnd() ?? '').split('\n')
+  const failedCommand = get(lastProofStepErrorCommandAtom)
+  if (failedCommand != null && lines[lines.length - 1].trim() == failedCommand.trim()) {
+    lines.pop()
+  }
+  const oldCode = lines.join('\n').trimEnd()
   const newCode = oldCode.length > 0 ? `${oldCode}\n${line}\n` : `${line}\n`
   set(codeAtom, newCode)
 })

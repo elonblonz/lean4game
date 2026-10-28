@@ -96,6 +96,7 @@
   "Level": "关卡",
   "Introduction": "介绍",
   "Retry": "重试",
+  "Undo": "撤销",
   "Failed command": "命令失败",
   "<p>As this server runs lean on our university machines, it has a limited capacity. Our current estimate is about 70 simultaneous games.</p>": "",
   "<0>Most aspects of the games and the infrastructure are still in development. Feel free to file a <1>GitHub Issue</1> about any problems you experience!</0>": "",

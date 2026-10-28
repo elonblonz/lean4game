@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { gameInfoAtom } from "../../../store/query-atoms";
@@ -35,6 +35,11 @@ export function Typewriter() {
   const failed = error && !isFetching && (error as any)?.code !== RPC_NEEDS_RECONNECT
 
   const proofPanelRef = useRef<HTMLDivElement>(null)
+
+  // Keep the newest step (and its errors) in view, scrolling no further than needed.
+  useEffect(() => {
+    proofPanelRef.current?.lastElementChild?.scrollIntoView({ block: "nearest" })
+  }, [proof])
 
   let image = gameInfo?.worlds?.nodes[worldId!]?.image
 
