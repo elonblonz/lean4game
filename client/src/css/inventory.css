@@ -20,7 +20,11 @@
   overflow-wrap: anywhere;
 }
 
-/* Mobile: taller inventory rows, easier to tap. */
+/* Mobile: taller inventory rows, easier to tap; one column that scrolls. */
+.level-mobile .inventory-list, .welcome.mobile .inventory-list {
+  flex-wrap: nowrap;
+}
+
 .level-mobile .inventory .item, .welcome.mobile .inventory .item {
   padding-top: .5rem;
   padding-bottom: .5rem;
