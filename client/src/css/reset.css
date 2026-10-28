@@ -32,7 +32,7 @@ body {
 a:not([class]) {
     text-decoration-skip-ink: auto;
     text-decoration-style: dotted;
-    color: var(--clr-primary);
+    color: var(--clr-link);
 }
 
 /* Make images easier to work with */

@@ -9,7 +9,7 @@
 }
 
 .gutter {
-  background-color: #eee;
+  background-color: var(--clr-surface-sunken);
 
   background-repeat: no-repeat;
   background-position: 50%;
@@ -24,7 +24,7 @@
 }
 
 .exercise-statement .lean-code {
-  color: rgba(0, 32, 90, 0.87);
+  color: var(--clr-code-text);
   font-size: 12px; /* TODO: is the monaco font-size hardcoded? */
 }
 
@@ -46,15 +46,15 @@
 }
 
 .doc-panel {
-  background: #fafafa;
+  background: var(--clr-surface-muted);
 }
 
 .doc-panel li {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12); /* This should be teh same colour as `divider` in Inventory.tsx */
+  border-bottom: 1px solid var(--clr-divider); /* This should be teh same colour as `divider` in Inventory.tsx */
 }
 
 .doc-panel li:first-of-type {
-  border-top: 1px solid rgb(0, 0, 0, 0.12); /* This should be teh same colour as `divider` in Inventory.tsx */
+  border-top: 1px solid var(--clr-divider); /* This should be teh same colour as `divider` in Inventory.tsx */
 }
 
 /* fix as Mui seems to set this to `nowrap`. */
@@ -104,8 +104,8 @@ td code  {
 .processing {
   background: linear-gradient(
     to right,
-    rgba(255, 165, 0, 1) 0%,
-    rgba(255, 165, 0, 1) 30%,
+    var(--clr-processing) 0%,
+    var(--clr-processing) 30%,
     transparent 30%,
     transparent  100%
   );
@@ -113,7 +113,7 @@ td code  {
 
 /* Styling in the left margin of the editor on error */
 .glyph-margin-error {
-  background: rgba(255, 0, 0, 1);
+  background: var(--clr-gutter-error);
 }
 
 /***************************************/
@@ -171,7 +171,7 @@ td code  {
   margin-left: .5em;
   margin-right: .5em;
   min-height: 2.5em;
-  border-top:  0.1em solid #aaa;
+  border-top:  0.1em solid var(--clr-border);
   flex-shrink: 0;
 }
 
@@ -280,7 +280,7 @@ td code  {
 }
 
 .chat .recent {
-  box-shadow: .0em .0em .4em .1em #8cbbe9;
+  box-shadow: .0em .0em .4em .1em var(--clr-recent-glow);
 }
 
 .exercise .step.selected .goal-tabs, .chat .selected {
@@ -296,7 +296,7 @@ td code  {
 }
 
 .impressum {
-  background-color: #fff;
+  background-color: var(--clr-background);
   width: 100%;
   height: 100%;
   position: absolute;
@@ -311,10 +311,10 @@ td code  {
   flex-direction: column;
   right: 0;
   top: 100%;
-  background-color: #fff;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: -.1rem .3rem .3rem 0 rgba(0, 0, 0, 0.1);
+  background-color: var(--clr-surface);
+  border-top: 1px solid var(--clr-divider-subtle);
+  border-bottom: 1px solid var(--clr-divider-subtle);
+  box-shadow: -.1rem .3rem .3rem 0 var(--clr-shadow-soft);
 }
 
 .menu.dropdown.hidden {
@@ -357,6 +357,6 @@ td code  {
 }
 
 .nav-btns .language-btn {
-  background: #DDF6FF;
+  background: var(--clr-info-bg);
   text-align: center;
 }

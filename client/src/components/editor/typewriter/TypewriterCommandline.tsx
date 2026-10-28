@@ -9,6 +9,7 @@ import { typewriterContentAtom, codeAtom, modelAtom, appendCodeLineAtom, lastPro
 import { twMerge } from "tailwind-merge";
 import { deletedChatAtom } from "../../../store/chat-atoms";
 import { oneLineEditorAtom } from "./typewriter-atoms";
+import { darkModeAtom } from "../../../store/preferences-atoms";
 
 /** The input field */
 export function TypewriterCommandLine() {
@@ -22,6 +23,7 @@ export function TypewriterCommandLine() {
   const [typewriter, setTypewriter] = useAtom(typewriterContentAtom)
   const [failedCommand] = useAtom(lastProofStepErrorCommandAtom)
   const [proof] = useAtom(proofAtom)
+  const [darkMode] = useAtom(darkModeAtom)
   const oneLineEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
 
@@ -99,7 +101,7 @@ export function TypewriterCommandLine() {
       },
       scrollBeyondLastLine: false,
       overviewRulerBorder: false,
-      theme: 'Visual Studio Light',
+      theme: darkMode ? 'Visual Studio Dark' : 'Visual Studio Light',
       contextmenu: false
     }
 

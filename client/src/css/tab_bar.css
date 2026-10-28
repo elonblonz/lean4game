@@ -1,10 +1,10 @@
 
 .tab-bar {
-  border-bottom: 0.1em solid var(--clr-dark-gray);
+  border-bottom: 0.1em solid var(--clr-border);
 }
 
 .tab {
-  color: var(--clr-darker-gray);
+  color: var(--clr-text-secondary);
   line-height: inherit;
   text-decoration: none;
   padding: 0.2rem 1rem;
@@ -31,27 +31,27 @@
 }
 
 .tab-bar.current .tab.active {
-  color: black;
+  color: var(--clr-text);
   border-bottom: 0.3em solid var(--clr-primary);
 }
 
 .tab.recent {
-  background-image: linear-gradient(to bottom, rgba(255,0,0,0), rgb(242, 190, 255));
+  background-image: linear-gradient(to bottom, transparent, var(--clr-recent));
 }
 
 .tab.recent:not(.active) {
-  border-bottom: 0.3em solid rgb(242, 190, 255);
+  border-bottom: 0.3em solid var(--clr-recent);
 }
 
 .tab.new {
-  background-image: linear-gradient(to bottom, rgba(255,0,0,0), rgb(255, 242, 190));
+  background-image: linear-gradient(to bottom, transparent, var(--clr-new));
 }
 
 .tab.new:not(.active) {
-  border-bottom: 0.3em solid rgb(255, 242, 190);
+  border-bottom: 0.3em solid var(--clr-new);
 }
 
 .tab.active {
-  color: black;
-  border-bottom: 0.3em solid #999;
+  color: var(--clr-text);
+  border-bottom: 0.3em solid var(--clr-border-strong);
 }

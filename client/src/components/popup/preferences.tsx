@@ -10,7 +10,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import ReactCountryFlag from 'react-country-flag';
 import { useTranslation } from 'react-i18next';
 import { useAtom } from 'jotai';
-import { preferencesAtom } from '../../store/preferences-atoms';
+import { Preferences, preferencesAtom } from '../../store/preferences-atoms';
 
 export function PreferencesPopup() {
   let { t } = useTranslation()
@@ -41,6 +41,10 @@ export function PreferencesPopup() {
 
   const handlerChangeLanguage = (ev: SelectChangeEvent<string>) => {
     setPreferences(prev => ({ ...prev, language: ev.target.value }))
+  }
+
+  const handlerChangeTheme = (ev: SelectChangeEvent<Preferences["theme"]>) => {
+    setPreferences(prev => ({ ...prev, theme: ev.target.value as Preferences["theme"] }))
   }
 
   return <Typography variant="body1" component="div" className="settings">
@@ -123,6 +127,28 @@ export function PreferencesPopup() {
               }
               label={t("Show locked inventory items")}
               labelPlacement="end"
+            />
+          </div>
+        </div>
+        <div className='preferences-category'>
+          <div className='category-title'>
+            <h3>{t("Appearance")}</h3>
+          </div>
+          <div className='preferences-item first leave-left-gap'>
+            <FormControlLabel
+              control={
+                <Box sx={{ width: 300 }}>
+                  <Select
+                    value={preferences.theme ?? "system"}
+                    label={t("Appearance")}
+                    onChange={handlerChangeTheme}>
+                      <MenuItem value="system">{t("Same as system")}</MenuItem>
+                      <MenuItem value="light">{t("Light")}</MenuItem>
+                      <MenuItem value="dark">{t("Dark")}</MenuItem>
+                  </Select>
+                </Box>
+              }
+              label=""
             />
           </div>
         </div>

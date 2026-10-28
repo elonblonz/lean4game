@@ -55,14 +55,14 @@ h5, h6 {
   display: flex;
   align-items:center;
   justify-content:center;
-  color: #aaa;
-  background-color: #eee;
+  color: var(--clr-text-disabled);
+  background-color: var(--clr-surface-sunken);
   cursor: pointer;
 }
 
 .privacy p {
   position: absolute;
-  color: #888;
+  color: var(--clr-text-subtle);
   bottom: 1.5px;
   font-size: 6px;
 }

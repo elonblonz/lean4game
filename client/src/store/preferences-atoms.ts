@@ -8,6 +8,7 @@ export interface Preferences {
   isSuggestionsMobileMode: boolean // TODO: remove me
   useFlags: boolean
   showLockedInventory: boolean
+  theme: "light" | "dark" | "system"
 }
 
 export function getWindowDimensions() {
@@ -25,6 +26,7 @@ const defaultPreferences: Preferences = {
   isSuggestionsMobileMode: true,
   useFlags: false,
   showLockedInventory: true,
+  theme: "system",
 };
 
 const storage = createJSONStorage<Preferences>(() => localStorage)
@@ -68,5 +70,29 @@ export const mobileAtom = atom(get => {
     case "mobile": return true
     case "desktop": return false
     case "auto": return widthBelowThreshold
+  }
+})
+
+const DARK_QUERY = "(prefers-color-scheme: dark)"
+
+/** Whether the operating system / browser prefers a dark colour scheme */
+const systemDarkAtom = atom(window.matchMedia?.(DARK_QUERY).matches ?? false)
+systemDarkAtom.onMount = set => {
+  const mq = window.matchMedia(DARK_QUERY)
+  const update = () => set(mq.matches)
+
+  update()
+  mq.addEventListener("change", update)
+
+  return () => mq.removeEventListener("change", update)
+}
+
+/** Whether the UI is shown in dark mode: the "theme" preference, resolved against the system setting */
+export const darkModeAtom = atom(get => {
+  // `theme` is missing from preferences saved by older versions
+  switch (get(preferencesAtom).theme ?? "system") {
+    case "dark": return true
+    case "light": return false
+    case "system": return get(systemDarkAtom)
   }
 })

@@ -8,8 +8,8 @@
 
 /* these colours are matching the ones of `.messages.error` */
 .error-message{
-  border: 2px solid #D8000C;
-  background-color: #FFBABA;
+  border: 2px solid var(--clr-error-border);
+  background-color: var(--clr-error-bg);
   border-radius: 1rem;
   display: inline-block;
   margin: 3rem;
@@ -21,8 +21,8 @@
 
 
 .thought-bubble {
-  border: 2px solid #D8000C;
-  background-color: #FFBABA;
+  border: 2px solid var(--clr-error-border);
+  background-color: var(--clr-error-bg);
   position: absolute;
   display: block;
 }

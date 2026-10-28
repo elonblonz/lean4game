@@ -35,14 +35,14 @@ const NSPIRAL = 12 // world size if NMAX has been passed and need to spiral.
 const MINFONT = 12
 
 // colours
-const grey = '#999'
-const lightgrey = '#bbb'
-const green = 'green' // 118a11?
-const lightgreen = '#139e13'
-const blue = '#1976d2'
-const darkgrey = '#868686'
-const darkgreen = '#0e770e'
-const darkblue = '#1667b8'
+const grey = 'var(--clr-world-locked)'
+const lightgrey = 'var(--clr-level-locked)'
+const green = 'var(--clr-world-completed)' // 118a11?
+const lightgreen = 'var(--clr-level-completed)'
+const blue = 'var(--clr-world-unlocked)'
+const darkgrey = 'var(--clr-world-label-locked)'
+const darkgreen = 'var(--clr-world-label-completed)'
+const darkblue = 'var(--clr-world-label-unlocked)'
 
 
 /** svg object for a level in the game tree */
@@ -100,7 +100,7 @@ export function LevelIcon({ world, level, position }:
   return (
     <a onClick={() => {if (!levelDisabled) navigateAcrossWorlds(world, targetLevel)}}
         className={`level${levelDisabled ? ' disabled' : ''}`}>
-      <circle fill={completed ? lightgreen : unlocked? blue : lightgrey} cx={x} cy={y} r={r} />
+      <circle style={{fill: completed ? lightgreen : unlocked? blue : lightgrey}} cx={x} cy={y} r={r} />
       <foreignObject className="level-title-wrapper" x={x} y={y}
           width={1.42*r} height={1.42*r} transform={"translate("+ -.71*r +","+ -.71*r +")"}>
         <div>
@@ -143,7 +143,7 @@ export function WorldIcon({world, title, position}:
       onClick={() => {if (!worldDisabled) navigateAcrossWorlds(world, firstUncompleted)}}
       className={`world${worldDisabled ? ' disabled' : ''}`}>
     <circle className="world-circle" cx={s*position.x} cy={s*position.y} r={R}
-        fill={completed ? green : unlocked ? blue : grey}/>
+        style={{fill: completed ? green : unlocked ? blue : grey}}/>
     { false ? // fontSize >= MINFONT ?
       // NOTE: This code would display the world names inside the bubble, but currently
       //       it isn't used.
@@ -175,7 +175,7 @@ export function WorldPath({source, target, sourceWorld} : {source: any, target: 
   const [ sourceCompleted ] = useAtom(worldCompletedAtom(sourceWorld))
   return <line x1={s*source.position.x} y1={s*source.position.y}
           x2={s*target.position.x} y2={s*target.position.y}
-          stroke={sourceCompleted ? green : grey} strokeWidth={lineWidth} />
+          style={{stroke: sourceCompleted ? green : grey}} strokeWidth={lineWidth} />
 }
 
 /** Download a file containing `data` */

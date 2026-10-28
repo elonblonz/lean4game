@@ -56,9 +56,9 @@ a {
 }
 .game {
   cursor: pointer;
-  border: 1px solid rgb(140, 140, 140);
+  border: 1px solid var(--clr-card-border);
   border-radius: 20px;
-  box-shadow: 5px 5px 8px rgb(140, 140, 140);
+  box-shadow: 5px 5px 8px var(--clr-card-shadow);
   width: 100%;
   max-width: 500px;
   display: flex;
@@ -76,8 +76,8 @@ a {
 }
 
 div.image {
-  background: rgb(29,0,36);
-  background: linear-gradient(137deg, rgba(97,9,121,1) 0%, rgba(0,212,255,1) 100%);
+  background: var(--clr-hero-fallback);
+  background: linear-gradient(137deg, var(--clr-hero-start) 0%, var(--clr-hero-end) 100%);
 }
 
 .game .wrapper > :not(.image), .game .info {
@@ -108,8 +108,8 @@ div.image {
 }
 
 .info tr {
-  border-top: 1px solid rgb(200, 200, 200);
-  border-bottom: 1px solid rgb(200, 200, 200);
+  border-top: 1px solid var(--clr-border-light);
+  border-bottom: 1px solid var(--clr-border-light);
 }
 
 .info td {
@@ -143,13 +143,13 @@ header {
 
 #main-title h1 {
   font-weight: bolder;
-  color: rgb(255, 255, 255);
+  color: var(--clr-hero-text);
   font-size: calc(1.425rem + 2.1vw);
   text-align: center;
 }
 
 #main-title p {
-  color: rgb(255, 255, 255);
+  color: var(--clr-hero-text);
   font-weight: bold;
   text-align: center;
   max-width: 600px;
@@ -157,12 +157,12 @@ header {
 }
 
 #main-title a {
-  color: rgb(255, 255, 255);
+  color: var(--clr-hero-text);
   text-decoration: underline dotted;
 }
 
 #main-title a:hover {
-  color: rgb(218, 218, 218);
+  color: var(--clr-hero-text-hover);
 }
 
 #main-title i {
@@ -173,11 +173,11 @@ header nav {
   display: flex;
   justify-content: flex-end;
   padding: 8px;
-  background-color: rgba(0, 133, 162, .7);
+  background-color: var(--clr-landing-nav);
 }
 
 footer {
-  background-color: rgba(0, 133, 162, 1);
+  background-color: var(--clr-landing-footer);
   /* display: flex;
   flex-direction: row;
   justify-content: flex-end; */
@@ -185,7 +185,7 @@ footer {
 }
 
 footer .link {
-  color: white;
+  color: var(--clr-hero-text);
   cursor: pointer;
   margin-left: 40px;
   margin-right: 40px;
@@ -212,11 +212,11 @@ footer .link {
 }
 
 .landing-page > section:nth-of-type(odd) {
-  background-color: rgb(248, 249, 250)
+  background-color: var(--clr-landing-section-alt)
 }
 
 .landing-page > section:nth-of-type(even) {
-  background-color: rgb(255, 255, 255)
+  background-color: var(--clr-landing-section)
 }
 
 @media screen and (min-width: 1300px) {
@@ -243,7 +243,7 @@ footer .link {
 .announcement + .announcement {
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid rgb(200, 200, 200);
+  border-top: 1px solid var(--clr-border-light);
 }
 
 .announcement h2 {

@@ -6,16 +6,16 @@
 }
 .message.information, .message.info {
   /* color: #059; */
-  color: #000;
-  background-color: #DDF6FF;
+  color: var(--clr-info-text);
+  background-color: var(--clr-info-bg);
 }
 .message.warning {
-  color: #9F6000;
-  background-color: #FEEFB3;
+  color: var(--clr-warning-text);
+  background-color: var(--clr-warning-bg);
 }
 .message.error {
-  color: #D8000C;
-  background-color: #FFBABA;
+  color: var(--clr-error-text);
+  background-color: var(--clr-error-bg);
 }
 
 /* Mobile: wrap long error lines instead of cutting them off at the screen edge. */
@@ -25,9 +25,9 @@
 }
 
 .message.deleted-hint {
-  background-color: #eee;
-  color: #777;
-  box-shadow: .0em .0em .5em .2em #eee;
+  background-color: var(--clr-surface-sunken);
+  color: var(--clr-text-muted);
+  box-shadow: .0em .0em .5em .2em var(--clr-surface-sunken);
  }
 
 .hyp-group {
@@ -36,7 +36,7 @@
 
 /* Display hyp names as clickable buttons */
 .hyp-group .hyp-name, .insert-button {
-  border: 1px solid var(--clr-dark-gray);
+  border: 1px solid var(--clr-border);
   border-radius: 4px;
   display: inline-block;
   padding-left: 4px;
@@ -67,7 +67,7 @@
   padding-top: .2em;
   padding-bottom: .2em;
   border-radius: .5em;
-  background-color: #eee;
+  background-color: var(--clr-surface-sunken);
 
 }
 
@@ -80,19 +80,19 @@
 }
 
 .typewriter.disabled{
-  background: #bbb;
+  background: var(--clr-surface-strong);
 }
 
 .typewriter.disabled .btn-inverted,
 .typewriter.disabled .mtk1 {
-  color: #777;
+  color: var(--clr-text-muted);
 }
 
 .typewriter.disabled .typewriter-input-wrapper,
 .typewriter.disabled .monaco-editor,
 .typewriter.disabled .monaco-editor-background,
 .typewriter.disabled .btn-inverted {
-  background-color: #eee;
+  background-color: var(--clr-surface-sunken);
 }
 
 .typewriter form {
@@ -115,7 +115,7 @@
   flex: 1;
   padding: 0.2em .6em;
   font-size: 1rem;
-  background: white;
+  background: var(--clr-surface);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -150,7 +150,7 @@
 }
 
 .other-goals .goals-section-title, .other-goals summary, .other-goals summary .font-code {
-  color: #5191d1;
+  color: var(--clr-text-accent);
 }
 
 .goals-section {
@@ -175,29 +175,29 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scroll-snap-type: y proximity;
-  color: #ccc;
+  color: var(--clr-history-5);
 
 }
 
 .proof-display div:nth-last-child(4) {
-  color: #999;
+  color: var(--clr-history-4);
 }
 
 .proof-display div:nth-last-child(3) {
-  color: #666;
+  color: var(--clr-history-3);
 }
 
 .proof-display div:nth-last-child(2) {
-  color: #333;
+  color: var(--clr-history-2);
 }
 
 .proof-display div:nth-last-child(1) {
-  color: #000;
+  color: var(--clr-history-1);
   scroll-snap-align: end;
 }
 
 .proof-display-wrapper {
-  background-color: #f0f0f0;
+  background-color: var(--clr-surface-subtle);
   border-radius: 1em;
   padding: 0.6em;
 }
@@ -216,7 +216,7 @@
 }
 
 .exercise .command {
-  background-color: #bbb;
+  background-color: var(--clr-surface-strong);
   padding: .5em;
   border-radius: .2em;
   /* TODO: It seems my browsers merge the margings of the proof steps,
@@ -229,7 +229,7 @@
 }
 
 .exercise .failed-command {
-  background-color: #eee;
+  background-color: var(--clr-surface-sunken);
   padding: .5em;
   border-radius: .2em;
   /* TODO: It seems my browsers merge the margings of the proof steps,
@@ -242,18 +242,18 @@
 
 .exercise .command-text {
   flex: 1;
-  background-color: #fff;
+  background-color: var(--clr-surface);
   font-size: 14px;
   padding: 0.4em .6em 0;
 }
 
 .undo-button {
-  color: #888;
-  background-color: white;
+  color: var(--clr-text-subtle);
+  background-color: var(--clr-surface);
 }
 
 .crashed_message {
-  color: #D8000C;
+  color: var(--clr-error-text);
   font-weight: bold;
   padding-left: .5em;
   padding-right: .5em;
@@ -292,7 +292,7 @@
 }
 
 .goal-sign line {
-  stroke: var(--clr-dark-gray);
+  stroke: var(--clr-border);
   stroke-width: 2;
 }
 
