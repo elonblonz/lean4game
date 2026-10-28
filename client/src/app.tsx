@@ -56,9 +56,9 @@ function App({ children }: { children?: React.ReactNode }) {
     })()
 
     return () => {
-      if (leanMonaco && typeof leanMonaco?.dispose === "function") {
-        leanMonaco?.dispose?.()
-      }
+      // Dispose the instance this effect started (`leanMonaco` is the previous render's value).
+      _leanMonaco.dispose()
+      setLeanMonaco(null)
     }
   }, [leanMonacoOptions, setLeanMonaco])
 

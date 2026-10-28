@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { gameInfoAtom } from "../../../store/query-atoms";
 import { gameIdAtom, worldIdAtom } from "../../../store/location-atoms";
 import path from "node:path";
-import { proofAtom, proofQueryAtom, RPC_NEEDS_RECONNECT } from "../../../store/editor-atoms";
+import { needsReconnect, proofAtom, proofQueryAtom } from "../../../store/editor-atoms";
 import { ExerciseStatement } from "../ExerciseStatement";
 import { ProofStep } from "./proof_step/ProofStep";
 import { TypewriterCommandLine } from "./TypewriterCommandline";
@@ -35,7 +35,7 @@ export function Typewriter() {
   const [mobile] = useAtom(mobileAtom)
   const [{ error, isFetching, refetch }] = useAtom(proofQueryAtom)
   // An outdated session is reconnected automatically (see `PlayableLevel`), so keep waiting.
-  const failed = error && !isFetching && (error as any)?.code !== RPC_NEEDS_RECONNECT
+  const failed = error && !isFetching && !needsReconnect(error)
 
   const proofPanelRef = useRef<HTMLDivElement>(null)
 
@@ -52,9 +52,10 @@ export function Typewriter() {
       <div className="pusher" />
       <div className='proof' ref={proofPanelRef}>
         <ExerciseStatement showLeanStatement={true} />
-        {proof ? proof.steps.map((step, i) => <ProofStep key={i} step={step} idx={i} />)
-      : failed ? <ProofStateError retry={refetch} />
-      : <div className="centered-spinner"><CircularProgress /></div>}
+        {proof?.steps.map((step, i) => <ProofStep key={i} step={step} idx={i} />)}
+        {/* Also when an older proof state is still shown: it's out of date. */}
+        {failed ? <ProofStateError retry={refetch} />
+          : !proof && <div className="centered-spinner"><CircularProgress /></div>}
         {mobile && proof && <MobileLevelFooter />}
       </div>
     </div>

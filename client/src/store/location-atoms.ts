@@ -28,6 +28,8 @@ export const pathSegmentsAtom = atom((get) => {
   return pathname?.split("/").filter(Boolean) ?? []
 })
 
+// Navigating to a game, world or level adds a history entry, so that the browser's back and
+// forward buttons work; redirects (`redirectAtom`) replace the current entry instead.
 export const gameIdAtom = atom((get) => {
   const segments = get(pathSegmentsAtom)
   if (segments.length >= 2) {
@@ -40,7 +42,7 @@ export const gameIdAtom = atom((get) => {
   }
 }, (get, set, gameId: string) => {
   const location = get(locationAtom)
-  set(locationAtom, { ...location, hash: `#/${gameId}`, pathname: "" }, { replace: true })
+  set(locationAtom, { ...location, hash: `#/${gameId}`, pathname: "" })
 })
 
 export const worldIdAtom = atom((get) => {
@@ -56,7 +58,7 @@ export const worldIdAtom = atom((get) => {
 }, (get, set, worldId: string) => {
   const gameId = get(gameIdAtom)
   const location = get(locationAtom)
-  set(locationAtom, { ...location, hash: `#/${gameId}/world/${worldId}`, pathname: "" }, { replace: true })
+  set(locationAtom, { ...location, hash: `#/${gameId}/world/${worldId}`, pathname: "" })
 })
 
 export const levelIdAtom = atom((get) => {
@@ -75,13 +77,13 @@ export const levelIdAtom = atom((get) => {
   const gameId = get(gameIdAtom)
   const worldId = get(worldIdAtom)
   const location = get(locationAtom)
-  set(locationAtom, { ...location, hash: `#/${gameId}/world/${worldId}/level/${Math.max(levelId, 0)}`, pathname: "" }, { replace: true })}
+  set(locationAtom, { ...location, hash: `#/${gameId}/world/${worldId}/level/${Math.max(levelId, 0)}`, pathname: "" })}
 )
 
 export const navigateAcrossWorldsAtom = atom(null, (get, set, worldId: string, levelId: number) => {
   const gameId = get(gameIdAtom)
   const location = get(locationAtom)
-  set(locationAtom, { ...location, hash: `#/${gameId}/world/${worldId}/level/${Math.max(levelId, 0)}`, pathname: "" }, { replace: true })
+  set(locationAtom, { ...location, hash: `#/${gameId}/world/${worldId}/level/${Math.max(levelId, 0)}`, pathname: "" })
 })
 
 export const redirectAtom = atom(null, (get, set, hash: string) => {

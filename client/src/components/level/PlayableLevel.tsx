@@ -2,12 +2,15 @@ import { useTranslation } from "react-i18next"
 import { useGameTranslation } from "../../utils/translation"
 import { useEffect, useRef, useState } from "react"
 import { useAtom } from "jotai"
-import { clientAtom, codeStorageAtom, rpcSessionAtom, editorAtom, leanMonacoAtom, lockEditorModeAtom, modelAtom, typewriterModeAtom, uriAtom, proofQueryAtom, RPC_NEEDS_RECONNECT } from "../../store/editor-atoms"
+import { clientAtom, codeStorageAtom, rpcSessionAtom, editorAtom, leanMonacoAtom, lockEditorModeAtom, modelAtom, typewriterModeAtom, uriAtom, proofQueryAtom, needsReconnect, levelUriAtom, modelVersionAtom, syncedVersionAtom, typewriterContentAtom, currentProofAtom } from "../../store/editor-atoms"
+import { deletedChatAtom, selectedStepAtom } from "../../store/chat-atoms"
+import { inventoryAtom, selectedDocTileAtom } from "../../store/inventory-atoms"
+import { completedAtom } from "../../store/progress-atoms"
 import { gameIdAtom, levelIdAtom, worldIdAtom } from "../../store/location-atoms"
 import { mobileAtom } from "../../store/preferences-atoms"
 import { gameInfoAtom, levelInfoAtom } from "../../store/query-atoms"
 import { LeanMonacoEditor, RpcSessionAtPos } from "lean4monaco"
-import { LeanFileProgressProcessingInfo, RpcConnectParams } from "@leanprover/infoview-api"
+import { RpcConnectParams } from "@leanprover/infoview-api"
 import { CircularProgress } from "@mui/material"
 import { LevelAppBar } from "../app_bar"
 import React from "react"
@@ -36,7 +39,6 @@ export function PlayableLevel() {
   useEffect(() => { setPageNumber(0) }, [worldId, levelId])
   // set to true to prevent switching between typewriter and editor
   const [lockEditorMode] = useAtom(lockEditorModeAtom)
-  const [, setTypewriterInput] = useState("")
   const lastLevel = worldId && (levelId !== undefined) && levelId >= (gameInfo?.worldSize?.[worldId] ?? 0)
 
   // When clicking on an inventory item, the inventory is overlayed by the item's doc.
@@ -50,40 +52,89 @@ export function PlayableLevel() {
   const [client, setClient] = useAtom(clientAtom)
   const [uri] = useAtom(uriAtom)
   const [rpcSess, setRpcSess] = useAtom(rpcSessionAtom)
+  const [levelUri] = useAtom(levelUriAtom)
+  const [modelVersion, setModelVersion] = useAtom(modelVersionAtom)
+  const [syncedVersion, setSyncedVersion] = useAtom(syncedVersionAtom)
+  const [, setTypewriterContent] = useAtom(typewriterContentAtom)
+  const [, setDeletedChat] = useAtom(deletedChatAtom)
+  const [, setSelectedStep] = useAtom(selectedStepAtom)
+  const [, setSelectedDocTile] = useAtom(selectedDocTileAtom)
 
-  // Start the editor, following lean4monaco demo
+  // Start the editor, following lean4monaco demo. Each level has its own document,
+  // `file:///<world>/<level>.lean` (the relay gives Lean one level at a time).
   useEffect(() => {
     if (leanMonaco) {
       const leanMonacoEditor = new LeanMonacoEditor()
-      const uriStr = `file:///${worldId}/${levelId}.lean`
+      let disposed = false
 
       ;(async () => {
         await leanMonaco!.whenReady
         console.debug('[lean4game]: starting editor')
-        await leanMonacoEditor.start(codeviewRef.current!, uriStr, code ?? "")
+        await leanMonacoEditor.start(codeviewRef.current!, levelUri, code ?? "")
         console.debug('[lean4game]: editor started')
+        if (disposed) return
+        // The document was opened with this version; changes from now on are reported by
+        // the client's `didChange` (see below).
+        const version = leanMonacoEditor.editor?.getModel()?.getVersionId()
+        setModelVersion(version)
+        setSyncedVersion(version)
         setEditor(leanMonacoEditor.editor)
       })()
 
       return () => {
+        disposed = true
         leanMonacoEditor.dispose()
+        // Forget everything that belongs to this level, so the next one doesn't use it
+        // (all of these are global atoms).
+        setEditor(null)
+        setRpcSess(sess => { sess?.dispose(); return undefined })
+        setModelVersion(undefined)
+        setSyncedVersion(undefined)
+        setTypewriterContent("")
+        setDeletedChat([])
+        setSelectedStep(undefined)
+        setSelectedDocTile(null)
       }
     }
   }, [leanMonaco, worldId, levelId])
 
-  // Persist editor text into progress whenever the model changes.
+  // Persist editor text into progress whenever the model changes. Only for this level's
+  // editor: right after switching levels, `editor` can still be the previous level's.
   useEffect(() => {
-    if (!editor) return
+    const model = editor?.getModel()
+    if (!editor || !model || model.uri.toString() !== levelUri) return
 
     setCode(editor.getValue())
     const disposable = editor.onDidChangeModelContent(() => {
       setCode(editor.getValue())
+      setModelVersion(model.getVersionId())
     })
 
     return () => {
       disposable.dispose()
     }
-  }, [editor, setCode])
+  }, [editor, setCode, levelUri])
+
+  // Track which version of the text Lean has: the proof state is only requested for that.
+  useEffect(() => {
+    if (!client) return
+    const disposable = client.didChange((params: { textDocument: { uri: string, version: number } }) => {
+      if (decodeURIComponent(params.textDocument.uri) == decodeURIComponent(levelUri)) {
+        setSyncedVersion(params.textDocument.version)
+      }
+    })
+    return () => disposable.dispose()
+  }, [client, levelUri])
+
+  // In case a change is never reported (it should be), don't wait for it forever.
+  useEffect(() => {
+    if (modelVersion === undefined || syncedVersion === modelVersion) return
+    const timer = setTimeout(() => {
+      console.warn(`[lean4game] Lean did not report receiving version ${modelVersion}; asking anyway`)
+      setSyncedVersion(modelVersion)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [modelVersion, syncedVersion])
 
   // wait until the client exists
   // TODO: it didn't work to define an atom `get(editorAtom)?.clientProvider?.getClients()?.[0]`
@@ -108,58 +159,66 @@ export function PlayableLevel() {
     return () => clearInterval(interval)
   }, [leanMonaco?.clientProvider])
 
-  // Start RPC session
+  // Start an RPC session for this level once its editor exists.
+  const connecting = useRef(false)
   useEffect(() => {
-    function updateRpcSession() {
-      if (rpcSess) return true
-      if (!client || !uri) return false
+    if (rpcSess?.uri === levelUri) return
+    if (!client || uri?.toString() !== levelUri) return
+    let cancelled = false
+    function connect() {
+      if (connecting.current || !client) return
+      connecting.current = true
       console.debug('rpc session connecting...')
-      client.sendRequest('$/lean/rpc/connect', {uri: uri.toString()} as RpcConnectParams).then(result => {
+      client.sendRequest('$/lean/rpc/connect', {uri: levelUri} as RpcConnectParams).then(result => {
         const sessionId = result.sessionId
         console.debug(`rpc session id: ${sessionId}`)
-        const _rpcSess = new RpcSessionAtPos(client, sessionId, uri.toString())
-        setRpcSess(_rpcSess)
+        const _rpcSess = new RpcSessionAtPos(client, sessionId, levelUri)
+        if (cancelled) { _rpcSess.dispose(); return }
+        setRpcSess(old => { old?.dispose(); return _rpcSess })
       }).catch((err) => {
         console.debug("rpc connect failed: ", err)
+      }).finally(() => {
+        connecting.current = false
       })
     }
-    updateRpcSession()
-    const interval = setInterval(() => {
-      // try to get `rpcSess` until successful
-      if (updateRpcSession()) {
-        clearInterval(interval)
-      }
-    }, 500)
-    return () => clearInterval(interval)
-  }, [client, uri, rpcSess])
+    connect()
+    // Retry until it works, e.g. while Lean is still starting.
+    const interval = setInterval(connect, 2000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [client, uri, rpcSess, levelUri])
 
   // If Lean no longer knows our RPC session (e.g. the server restarted the file worker),
   // drop it so that the effect above connects a new one.
-  const [{ error: proofError, refetch: refetchProof }] = useAtom(proofQueryAtom)
+  const [{ error: proofError }] = useAtom(proofQueryAtom)
   useEffect(() => {
-    if ((proofError as any)?.code === RPC_NEEDS_RECONNECT) {
+    if (needsReconnect(proofError)) {
       console.debug('rpc session outdated, reconnecting')
-      setRpcSess(undefined)
+      setRpcSess(sess => { sess?.dispose(); return undefined })
     }
   }, [proofError])
 
-  // Ask for the proof state again once Lean has finished checking the file. Asking only
-  // when the code changes can be answered before Lean has processed the new code, which
-  // leaves the previous proof state on screen.
+  // When the proof is complete, mark the level as completed and add its new items (and the
+  // theorem just proved) to the inventory. Only for a proof state of the current text.
+  const [currentProof] = useAtom(currentProofAtom)
+  const [, setCompleted] = useAtom(completedAtom)
+  const [, addToInventory] = useAtom(inventoryAtom)
   useEffect(() => {
-    if (!client || !uri) return
-    const disposable = client.progressChanged(([fileUri, processing]: [string, LeanFileProgressProcessingInfo[]]) => {
-      if (processing.length == 0 && decodeURIComponent(fileUri) == decodeURIComponent(uri.toString())) {
-        refetchProof()
-      }
-    })
-    return () => disposable.dispose()
-  }, [client, uri, refetchProof])
+    if (!currentProof?.completed || !levelInfo) return
+    setCompleted(true)
+    const newTiles = [
+      ...levelInfo.tactics ?? [],
+      ...levelInfo.lemmas ?? [],
+      ...levelInfo.definitions ?? []
+    ].filter(tile => tile.new).map(tile => tile.name)
+    if (levelInfo.statementName != null) {
+      newTiles.push(levelInfo.statementName)
+    }
+    addToInventory(newTiles)
+  }, [currentProof, levelInfo])
 
-  // Select and highlight proof steps and corresponding hints
-  // TODO: with the new design, there is no difference between the introduction and
-  // a hint at the beginning of the proof...
-  const [selectedStep, setSelectedStep] = useState<number>()
 
   useEffect (() => {
     // Lock editor mode
@@ -189,24 +248,9 @@ export function PlayableLevel() {
   }, [levelInfo, levelId, worldId, gameId, editor])
 
 
+  // Focus the editor when switching to editor mode.
   useEffect(() => {
-    // TODO: That's a problem if the saved proof contains an error
-    // Reset command line input when loading a new level
-    setTypewriterInput("")
-
-  }, [gameId, worldId, levelId])
-
-  useEffect(() => {
-    const selection = editor?.getSelection();
-    if (!typewriterMode && editor && selection) {
-      // Delete last input attempt from command line
-      editor.executeEdits("typewriter", [{
-        range: selection,
-        text: "",
-        forceMoveMarkers: false
-      }]);
-      editor?.focus() // leanMonacoEditor?.editor.focus()
-    }
+    if (!typewriterMode) editor?.focus()
   }, [typewriterMode])
 
   // useEffect(() => {

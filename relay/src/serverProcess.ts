@@ -239,8 +239,143 @@ export class GameManager {
 
     const metadataUri = pathToFileURL(path.join(gameDir, 'Game', 'Metadata.lean')).href
 
+    /* The client has one document per level (`file:///<world>/<level>.lean`, see `level.tsx`),
+       and keeps the ones it has visited open. Lean gets a single document, `Metadata.lean`
+       with the level's header in front of the proof, so only one level is open in Lean at a
+       time. We keep the text of every level the client has open; when the client works on
+       another level, we close the current one in Lean and open the other one in full. */
+    const clientDocs = new Map<string, { text: string, version: number }>()
+    /** The client URI of the level that is open in Lean. */
+    let activeUri: string | undefined
+    /** The client URI that messages from Lean are about (the last level opened in Lean). */
+    let serverDocUri: string | undefined
+
+    /** Apply LSP content changes (positions in UTF-16 code units, like JS strings) to `text`. */
+    const applyChanges = (text: string, changes: any[]) => {
+      for (const change of changes) {
+        if (!change.range) { text = change.text; continue }
+        const offset = (pos: { line: number, character: number }) => {
+          let i = 0
+          for (let l = 0; l < pos.line; l++) {
+            const nl = text.indexOf('\n', i)
+            if (nl < 0) return text.length
+            i = nl + 1
+          }
+          return Math.min(i + pos.character, text.length)
+        }
+        text = text.slice(0, offset(change.range.start)) + change.text + text.slice(offset(change.range.end))
+      }
+      return text
+    }
+
+    /** The `didOpen` that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
+    const openInServer = (uri: string): object | undefined => {
+      const doc = clientDocs.get(uri)!
+      const pathParts = path.parse(new URL(uri).pathname)
+      worldId = path.basename(pathParts.dir)
+      levelId = pathParts.name
+      const levelDataPath = path.join(gameDir, '.lake', 'gamedata', `level__${worldId}__${levelId}.json`)
+      if (!fs.existsSync(levelDataPath)) {
+        console.error(`[${new Date()}] Missing level data: ${levelDataPath}`)
+        return undefined
+      }
+      const levelData = JSON.parse(fs.readFileSync(levelDataPath, 'utf8'))
+      onLevelOpened?.()
+
+      if (difficulty === undefined || inventory === undefined) {
+        console.error("Did not receive difficulty/inventory from client!")
+        difficulty = 1
+        inventory = []
+      }
+      // Note: `LevelScope` and `Runner` have to stay on the same line as each other so that
+      // the proof still starts on line `PROOF_START_LINE`.
+      const levelIdArgs =
+        `${JSON.stringify(gameData.name)} ${JSON.stringify(worldId)} ${levelId} `
+      const text =
+        `import ${levelData.module} import GameServer.Runner \n` +
+        (usesLevelScope ? `LevelScope ${levelIdArgs}` : ``) +
+        `Runner ` + levelIdArgs +
+        `(difficulty := ${difficulty}) ` +
+        `(inventory := [${inventory.map(s => JSON.stringify(s)).join(',')}]) ` +
+        `:= by\n${doc.text}\n`
+      serverDocUri = uri
+      return { jsonrpc: "2.0", method: "textDocument/didOpen",
+        params: { textDocument: { uri: metadataUri, languageId: "lean4", version: doc.version, text } } }
+    }
+
+    /** Make `uri` the level that is open in Lean; returns the messages Lean needs for that. */
+    const activate = (uri: string): object[] => {
+      const out: object[] = []
+      if (activeUri !== undefined) {
+        out.push({ jsonrpc: "2.0", method: "textDocument/didClose", params: { textDocument: { uri: metadataUri } } })
+        activeUri = undefined
+      }
+      const open = openInServer(uri)
+      if (open) {
+        out.push(open)
+        activeUri = uri
+        console.info(`[${new Date()}] opened level in Lean: ${uri}`)
+      }
+      return out
+    }
+
+    /** Answer a request from the client ourselves instead of forwarding it. */
+    const replyError = (message: any, code: number, text: string) => {
+      if (message.id === undefined) return  // a notification: just drop it
+      socketConnection.writer.write({ jsonrpc: "2.0", id: message.id, error: { code, message: text } } as any)
+    }
+
+    /** Translate one message from the client into the messages to send to Lean. */
+    const fromClient = (message: any): object[] => {
+      if (message.method === "initialize") {
+        difficulty = message.params.initializationOptions.difficulty
+        inventory = message.params.initializationOptions.inventory
+        // We abuse the rootUri field to pass the game name to the server
+        message.params.rootUri = gameData.name
+        return [message]
+      }
+
+      const params = message.params ?? {}
+      const uri: string | undefined = params.textDocument?.uri ?? params.uri
+
+      if (message.method === "textDocument/didOpen") {
+        console.info(`[${new Date()}] didOpen: ${uri}`)
+        clientDocs.set(uri!, { text: params.textDocument.text, version: params.textDocument.version })
+        return activate(uri!)
+      }
+      if (message.method === "textDocument/didChange") {
+        const doc = clientDocs.get(uri!)
+        if (!doc) return []
+        doc.text = applyChanges(doc.text, params.contentChanges)
+        doc.version = params.textDocument.version
+        if (uri !== activeUri) return activate(uri!)  // sends the whole new text
+      } else if (message.method === "textDocument/didClose") {
+        clientDocs.delete(uri!)
+        if (uri !== activeUri) return []
+        activeUri = undefined
+      } else if (message.method === "$/lean/rpc/connect" && uri !== undefined && uri !== activeUri) {
+        // The client starts working on a level it opened before, without changing it.
+        if (!clientDocs.has(uri)) { replyError(message, -32801, `Unknown document ${uri}`); return [] }
+        const out = activate(uri)
+        if (uri !== activeUri) { replyError(message, -32801, `Cannot open level ${uri}`); return [] }
+        return [...out, message]
+      } else if (uri !== undefined && uri !== activeUri) {
+        // A message about a level that isn't open in Lean, e.g. from before switching levels.
+        // RPC calls fail so that the client reconnects; editor features (highlighting etc.)
+        // just get an empty answer.
+        if (message.id === undefined) return []
+        if (message.method?.startsWith("$/lean/rpc/")) {
+          replyError(message, -32900, `Level ${uri} is not open`)
+        } else {
+          socketConnection.writer.write({ jsonrpc: "2.0", id: message.id, result: null } as any)
+        }
+        return []
+      }
+      return [message]
+    }
+
     /** Sending messages from the client to the server */
-    socketConnection.forward(serverConnection, (message: any) => {
+    socketConnection.reader.listen((message: any) => {
       if (message?.error) {
         console.error(`[${new Date()}] CLIENT->SERVER error payload: ${JSON.stringify(message.error)}`)
       }
@@ -249,66 +384,20 @@ export class GameManager {
       if (usesCustomLeanServer) {
         if (isDevelopment) { console.log(`CLIENT: ${JSON.stringify(message)}`); }
         if (message.method === "textDocument/didOpen") onLevelOpened?.()
-        return message
+        serverConnection.writer.write(message)
+        return
       }
 
-      if (message.method === "initialize") {
-        difficulty = message.params.initializationOptions.difficulty
-        inventory = message.params.initializationOptions.inventory
-        // We abuse the rootUri field to pass the game name to the server
-        message.params.rootUri = gameData.name
-      }
-
-      if (message.method === "textDocument/semanticTokens/full") {
-        semanticTokenRequestIds.add(message.id)
-      }
-
-      if (message.method === "textDocument/didOpen") {
-        console.info(`[${new Date()}] didOpen: ${message.params?.textDocument?.uri}`)
-        // Parse the URI to get world and level
-        const uri = new URL(message.params.textDocument.uri)
-        const pathParts = path.parse(uri.pathname)
-        worldId = path.basename(pathParts.dir)
-        levelId = pathParts.name
-
-        replaceUri(message, metadataUri)
-
-        // Read level data from JSON file
-        const levelDataPath = path.join(gameDir, '.lake', 'gamedata', `level__${worldId}__${levelId}.json`)
-        if (!fs.existsSync(levelDataPath)) {
-          console.error(`[${new Date()}] Missing level data: ${levelDataPath}`)
+      for (const out of fromClient(message)) {
+        replaceUri(out, metadataUri)
+        if ((out as any).method === "textDocument/semanticTokens/full") {
+          semanticTokenRequestIds.add((out as any).id)
         }
-        const levelData = JSON.parse(fs.readFileSync(levelDataPath, 'utf8'))
-        onLevelOpened?.()
-
-        if (difficulty === undefined || inventory === undefined) {
-          console.error("Did not receive difficulty/inventory from client!")
-          difficulty = 1
-          inventory = []
-        }
-
-        let content = message.params.textDocument.text;
-        // Note: `LevelScope` and `Runner` have to stay on the same line as each other so that
-        // the proof still starts on line `PROOF_START_LINE`.
-        const levelIdArgs =
-          `${JSON.stringify(gameData.name)} ${JSON.stringify(worldId)} ${levelId} `
-        message.params.textDocument.text =
-          `import ${levelData.module} import GameServer.Runner \n` +
-          (usesLevelScope ? `LevelScope ${levelIdArgs}` : ``) +
-          `Runner ` + levelIdArgs +
-          `(difficulty := ${difficulty}) ` +
-          `(inventory := [${inventory.map(s => JSON.stringify(s)).join(',')}]) ` +
-          `:= by\n${content}\n`
-      } else {
-        replaceUri(message, metadataUri)
+        shiftLines(out, +PROOF_START_LINE)
+        // Print the message as the server will receive it
+        if (isDevelopment) { console.log(`CLIENT: ${JSON.stringify(out)}`); }
+        serverConnection.writer.write(out as any)
       }
-
-      shiftLines(message, +PROOF_START_LINE)
-
-      // Print the message as the server will receive it
-      if (isDevelopment) { console.log(`CLIENT: ${JSON.stringify(message)}`); }
-
-      return message
     });
 
 
@@ -325,7 +414,7 @@ export class GameManager {
       if (usesCustomLeanServer) return message
 
       shiftLines(message, -PROOF_START_LINE);
-      replaceUri(message, `file:///${worldId}/${levelId}.lean`) // as defined in `level.tsx`
+      if (serverDocUri !== undefined) replaceUri(message, serverDocUri)
 
       // Disable range semantic tokens because they are difficult to shift
       if ((message as any)?.result?.capabilities?.semanticTokensProvider?.range) {

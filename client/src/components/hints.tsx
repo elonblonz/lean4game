@@ -8,9 +8,21 @@ import { gameIdAtom } from "../store/location-atoms";
 import { deletedChatAtom, helpAtom } from "../store/chat-atoms";
 import { proofAtom } from "../store/editor-atoms";
 import { GameHint, InteractiveGoalsWithHints } from './infoview/types';
+import { ProofState } from '../api/rpc_api';
+import { DiagnosticSeverity } from 'vscode-languageserver-types';
 
-//FIXME: implement
-function lastStepHasErrors(x: any) {return false}
+/** Whether the proof's last step has errors: it is then the failed command, which is replaced
+ * by the next one, so its hints are not shown and help applies to the step before it. */
+export function lastStepHasErrors(proof: ProofState | null | undefined): boolean {
+  if (!proof?.steps.length) return false
+  const diags = [...proof.steps[proof.steps.length - 1].diags, ...proof.diagnostics]
+  return diags.some(d => d.severity == DiagnosticSeverity.Error)
+}
+
+/** Whether step `i` is the proof's failed last command. */
+export function isLastStepWithErrors(proof: ProofState | null | undefined, i: number): boolean {
+  return !!proof && i == proof.steps.length - 1 && lastStepHasErrors(proof)
+}
 
 
 /** Plug-in the variable names in a hint. We do this client-side to prepare

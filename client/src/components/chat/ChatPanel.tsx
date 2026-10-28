@@ -8,7 +8,7 @@ import { gameIdAtom, levelIdAtom } from '../../store/location-atoms'
 import { levelInfoAtom } from '../../store/query-atoms'
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms'
 import { proofAtom } from '../../store/editor-atoms'
-import { DeletedHints, filterHints, Hint, Hints, MoreHelpButton } from '../hints'
+import { DeletedHints, filterHints, Hint, Hints, isLastStepWithErrors, lastStepHasErrors, MoreHelpButton } from '../hints'
 import Markdown from 'react-markdown'
 import { faArrowRight, faHome } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -133,9 +133,3 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
     </div>
   </div>
 }
-
-//FIXME: implement
-function lastStepHasErrors(x: any) {return false}
-
-//FIXME: implement
-function isLastStepWithErrors(x: any, y: any) {return false}

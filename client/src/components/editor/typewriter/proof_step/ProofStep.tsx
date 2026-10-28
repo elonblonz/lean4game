@@ -11,7 +11,6 @@ import { mobileAtom } from "../../../../store/preferences-atoms";
 import { gameInfoAtom, levelInfoAtom } from "../../../../store/query-atoms";
 import { useGameTranslation } from "../../../../utils/translation";
 import { filterHints, Hint, Hints } from "../../../hints";
-import { i } from "@tanstack/query-core/build/legacy/hydration-BlEVG2Lp";
 import { GoalsTabs } from "./GoalsTab";
 import { GameHint } from "../../types";
 

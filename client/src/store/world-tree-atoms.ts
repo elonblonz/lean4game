@@ -33,7 +33,8 @@ export const levelCompletedAtomFamily = atomFamily((key: string) => atom<boolean
 export const levelsCompletedAtomFamily = atomFamily((worldId: string) => atom<boolean[]>(get => {
   const { data: gameInfo } = get(gameInfoAtom)
   const worldSize = gameInfo?.worldSize?.[worldId]
-  return Array.from(Array(worldSize).keys()).map(i => (get(levelCompletedAtomFamily(`${worldId}: ${i}`))))
+  // Levels are numbered 1 to `worldSize`; index 0 is the world's introduction (always "completed").
+  return Array.from(Array((worldSize ?? 0) + 1).keys()).map(i => (get(levelCompletedAtomFamily(`${worldId}:${i}`))))
 }))
 
 /** A world is completed if all its levels are */
@@ -57,7 +58,7 @@ export const firstIncompleteLevelAtomFamily = atomFamily((worldId: string) => at
 export const worldDependenciesCompletedAtomFamily = atomFamily((worldId: string) => atom<boolean>(get => {
   const { data: gameInfo } = get(gameInfoAtom)
   const prerequisitesCompleted: boolean[] = gameInfo?.worlds?.edges.filter(it => it[1] == worldId)?.map(it => {
-    return get(worldCompletedAtom(worldId)) ?? false
+    return get(worldCompletedAtom(it[0])) ?? false
   }) ?? []
   return prerequisitesCompleted.every(it => it)
 }))

@@ -1,11 +1,11 @@
-import React, { FormEvent, useEffect, useRef, useState } from "react";
+import React, { FormEvent, useEffect, useRef } from "react";
 import "../../../css/typewriter.css"
 import { useTranslation } from "react-i18next";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { useAtom } from "jotai";
 import * as monaco from 'monaco-editor'
-import { typewriterContentAtom, codeAtom, modelAtom, appendCodeLineAtom, lastProofStepErrorCommandAtom, proofAtom } from "../../../store/editor-atoms";
+import { typewriterContentAtom, codeAtom, appendCodeLineAtom, lastProofStepErrorCommandAtom, proofAtom, proofPendingAtom } from "../../../store/editor-atoms";
 import { twMerge } from "tailwind-merge";
 import { deletedChatAtom } from "../../../store/chat-atoms";
 import { oneLineEditorAtom } from "./typewriter-atoms";
@@ -14,47 +14,46 @@ import { darkModeAtom } from "../../../store/preferences-atoms";
 /** The input field */
 export function TypewriterCommandLine() {
   let { t } = useTranslation()
-  const [isProcessing, setProcessing] = useState(false)
   const [oneLineEditor, setOneLineEditor] = useAtom(oneLineEditorAtom)
-  const [model] = useAtom(modelAtom)
   const [code] = useAtom(codeAtom)
   const [, appendLine] = useAtom(appendCodeLineAtom)
   const [, setDeletedChatAtom] = useAtom(deletedChatAtom)
-  const [typewriter, setTypewriter] = useAtom(typewriterContentAtom)
+  const [, setTypewriter] = useAtom(typewriterContentAtom)
+  // While Lean hasn't answered for the current text, a new command waits (it would be
+  // appended to a proof whose last command may still turn out to have failed).
+  const [pending] = useAtom(proofPendingAtom)
   const [failedCommand] = useAtom(lastProofStepErrorCommandAtom)
   const [proof] = useAtom(proofAtom)
   const [darkMode] = useAtom(darkModeAtom)
   const oneLineEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
 
-  /** Handle keyboard events */
-  function handleKeyDown(event: KeyboardEvent) {
-    if (event.key == "Enter" || event.key == "NumpadEnter") {
-      event.preventDefault()
-      handleSubmit()
-    }
-  }
-
-  /** Wrapper to set the typewriter to processing. */
-  function handleSubmit(ev?: FormEvent<HTMLFormElement>) {
-    ev?.preventDefault()
-    setProcessing(true)
-    try { handleSubmitAux(ev) } finally { setProcessing(false) }
-  }
-
-  /** Process the entered command */
-  async function handleSubmitAux(ev?: FormEvent<HTMLFormElement>) {
-    const content = typewriter.trimEnd()
+  /** Submit the command line's text. A ref, so that the editor's key binding (created once)
+   * always calls the current version. */
+  const submitRef = useRef<() => void>(() => {})
+  /** A submit while Lean is still checking the previous command; done once it has answered. */
+  const queuedRef = useRef(false)
+  submitRef.current = () => {
+    const editor = oneLineEditorRef.current
+    if (!editor) return
+    if (pending) { queuedRef.current = true; return }
+    queuedRef.current = false
+    const content = editor.getValue().trim()
     if (content.length == 0) return
-
-    // Add typewriter content to the editor
+    // Clear the input first, so that a second Enter (or click) right away finds nothing to submit.
+    editor.setValue('')
     appendLine(content)
-
     // TODO: Desired logic is to only reset this after a new *error-free* command has been entered
     setDeletedChatAtom([])
+  }
 
-    // Clear typewriter
-    oneLineEditor?.getModel()?.setValue('')
+  useEffect(() => {
+    if (!pending && queuedRef.current) submitRef.current()
+  }, [pending])
+
+  function handleSubmit(ev?: FormEvent<HTMLFormElement>) {
+    ev?.preventDefault()
+    submitRef.current()
   }
 
   // start the editor used in the typewriter command line
@@ -72,7 +71,8 @@ export function TypewriterCommandLine() {
     }
 
     const editorConfig: monaco.editor.IStandaloneEditorConstructionOptions = {
-      value: typewriter,
+      // Each level starts with an empty command line.
+      value: "",
       language: "lean4",
       quickSuggestions: false,
       unicodeHighlight: {
@@ -123,6 +123,10 @@ export function TypewriterCommandLine() {
     myEditor.onDidContentSizeChange(layoutInput)
     layoutInput()
 
+    // Enter submits; only in this editor, and not while a completion list is open.
+    myEditor.addCommand(monaco.KeyCode.Enter, () => submitRef.current(), '!suggestWidgetVisible')
+    setTypewriter("")
+
     const changeDisposable = myEditor.getModel()?.onDidChangeContent(() => {
       const value = myEditor.getValue()
       setTypewriter(value)
@@ -158,21 +162,13 @@ export function TypewriterCommandLine() {
     oneLineEditor.setPosition({ lineNumber: 1, column: failedCommand.length + 1 })
   }, [proof, failedCommand, oneLineEditor, code])
 
-  // Handle keyboard events (i.e. "Enter")
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [handleKeyDown])
-
   // do not display if the proof is completed (with potential warnings still present)
-  return <div className={twMerge("typewriter", isProcessing && "disabled")}>
+  return <div className={twMerge("typewriter", pending && "pending")}>
         <form onSubmit={handleSubmit}>
           <div className="typewriter-input-wrapper">
             <div ref={inputRef} className="typewriter-input" />
           </div>
-          <button type="submit" disabled={isProcessing} className="btn btn-inverted">
+          <button type="submit" className="btn btn-inverted">
             <FontAwesomeIcon icon={faWandMagicSparkles} />&nbsp;{t("Execute")}
           </button>
         </form>

@@ -38,6 +38,17 @@ export const uriAtom = atom(get => get(modelAtom)?.uri)
 /** The currently used RPC session */
 export const rpcSessionAtom = atom<RpcSessionAtPos>()
 
+/** The URI of the current level's document (each level has its own, see `PlayableLevel`). */
+export const levelUriAtom = atom(get => `file:///${get(worldIdAtom)}/${get(levelIdAtom)}.lean`)
+
+/** The version of the current level's text in the editor. */
+export const modelVersionAtom = atom<number | undefined>(undefined)
+
+/** The latest version of the current level's text that has been sent to Lean. The proof state
+ * is only requested once this equals `modelVersionAtom`: Lean answers a request with the latest
+ * version it has, so a request sent before the new text would be answered for the old one. */
+export const syncedVersionAtom = atom<number | undefined>(undefined)
+
 /** The code of the current level as stored in local storage.
  *
  * The setter must not be used directly, expect inside the
@@ -70,13 +81,6 @@ export const codeAtom = atom(
   (get, set, val: string) => {
     const model = get(modelAtom)
     model?.setValue(val)
-
-    // FIXME: This is hacky. Changes to `codeAtom)` already retriggers this query, but too fast so
-    // the Lean server answers with the old file. The old version used
-    // `useServerNotificationEffect('textDocument/publishDiagnostics' ...)`
-    // to wait until the server publishes diagnostics, then ask for the proof, but I
-    // didn't get that to work yet...
-    setTimeout( () => { get(proofQueryAtom).refetch() }, 1000 );
   }
 )
 
@@ -99,53 +103,72 @@ export const appendCodeLineAtom = atom(null, (get, set, line: string) => {
   set(codeAtom, newCode)
 })
 
-/** Delete all code starting at line `line` */
-export const deleteCodeFromLineAtom = atom(null, (get, set, line: number) => {
+/** Delete the proof from step `step` on. Step 0 is the start of the proof (before any
+ * command), and step `i` is the result of the code's line `i - 1`. */
+export const deleteProofFromStepAtom = atom(null, (get, set, step: number) => {
   const code = get(codeAtom)
   if (code == undefined) return
 
   set(selectedStepAtom, undefined)
+  get(oneLineEditorAtom)?.setValue('')
   set(typewriterContentAtom, "")
 
+  // Show the hints of the deleted steps as deleted hints.
   const help = get(helpAtom)
   const proof = get(proofAtom)
   if (proof) {
-    const newDeletedChat = proof.steps.slice(line).flatMap((step, i) => {
-      let filteredHints = filterHints(step.goals[0]?.hints, proof.steps[i-1]?.goals[0]?.hints)
-      return filteredHints.filter(hint => (!hint.hidden || help.has(line + i)))
+    const newDeletedChat = proof.steps.slice(step).flatMap((s, j) => {
+      const filteredHints = filterHints(s.goals[0]?.hints, proof.steps[step + j - 1]?.goals[0]?.hints)
+      return filteredHints.filter(hint => (!hint.hidden || help.has(step + j)))
     })
     set(deletedChatAtom, newDeletedChat)
   }
 
-  // delete the info about displayed help where the lines were deleted
-  const newHelp = new Set(Array.from(help).filter(i => i < line - 1))
-  set(helpAtom, newHelp)
+  // Forget which hidden hints were shown for the deleted steps.
+  set(helpAtom, new Set(Array.from(help).filter(i => i < step)))
 
-  const lines = code.split("\n")
-  const newCode = lines.slice(0, line).join("\n")
-  set(codeAtom, newCode)
+  set(codeAtom, code.split("\n").slice(0, Math.max(0, step - 1)).join("\n"))
 })
 
 /** Lean's error code for an RPC session that the server no longer knows (`RpcNeedsReconnect`),
  * e.g. after the server restarted the file worker. The session has to be reconnected. */
 export const RPC_NEEDS_RECONNECT = -32900
 
+/** LSP's `ContentModified`: the document isn't (or no longer) the one Lean has open, e.g. a
+ * request from before switching levels. Also handled by reconnecting. */
+export const CONTENT_MODIFIED = -32801
+
+/** Whether a proof state request failed in a way that a new RPC session fixes. */
+export const needsReconnect = (error: any) =>
+  error?.code === RPC_NEEDS_RECONNECT || error?.code === CONTENT_MODIFIED
+
 /** How long to wait for the proof state before reporting that the Lean server didn't respond. */
 const PROOF_STATE_TIMEOUT_MS = 90_000
 
 /** The analysed proof, received over RPC  */
-export const proofQueryAtom = atomWithQuery<ProofState>((get) => {
+export const proofQueryAtom = atomWithQuery<ProofState | null>((get) => {
   const worldId = get(worldIdAtom)
   const levelId = get(levelIdAtom)
-  const code = get(codeAtom)
   const rpcSess = get(rpcSessionAtom)
+  const levelUri = get(levelUriAtom)
+  const version = get(modelVersionAtom)
+  const synced = get(syncedVersionAtom)
+  // Only ask once Lean has the current text, and only with this level's session.
+  const ready = rpcSess?.sessionId != undefined && rpcSess.uri == levelUri &&
+    version != undefined && synced === version && worldId != undefined && levelId != undefined
   return {
-    queryKey: ['proof', worldId, levelId, rpcSess?.sessionId, code],
+    queryKey: ['proof', worldId, levelId, rpcSess?.sessionId, version],
+    // While the next version is checked, keep showing this level's last proof state rather
+    // than a spinner (`isPlaceholderData` tells them apart).
+    placeholderData: (prev, prevQuery) =>
+      prevQuery?.queryKey[1] === worldId && prevQuery?.queryKey[2] === levelId &&
+      prevQuery?.queryKey[3] === rpcSess?.sessionId ? prev : undefined,
     // Errors are thrown rather than swallowed, so that the level can reconnect an outdated
     // session or tell the player, instead of showing a loading spinner forever.
-    retry: (failureCount, error: any) => error?.code !== RPC_NEEDS_RECONNECT && failureCount < 2,
+    retry: (failureCount, error: any) => !needsReconnect(error) && failureCount < 2,
     queryFn: async () => {
-      if (!rpcSess) return undefined
+      // `refetch` runs even when the query isn't enabled.
+      if (!ready) return null
       let timer: ReturnType<typeof setTimeout> | undefined
       const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new Error('Timed out waiting for the Lean server')),
@@ -175,7 +198,7 @@ export const proofQueryAtom = atomWithQuery<ProofState>((get) => {
         clearTimeout(timer)
       }
     },
-    enabled: rpcSess?.sessionId != undefined && code != undefined && worldId != undefined && levelId != undefined
+    enabled: ready
   }
 })
 
@@ -185,7 +208,17 @@ export const proofQueryAtom = atomWithQuery<ProofState>((get) => {
  *
  * Note that the first step will always have "" as command
  */
-export const proofAtom = atom(get => get(proofQueryAtom).data)
+export const proofAtom = atom(get => get(proofQueryAtom).data ?? undefined)
+
+/** The proof state for the current text, or `undefined` while that is still being checked
+ * (when `proofAtom` may still show the previous version's). */
+export const currentProofAtom = atom(get => {
+  const query = get(proofQueryAtom)
+  return query.isPlaceholderData ? undefined : query.data ?? undefined
+})
+
+/** Whether the current text has not been checked yet. */
+export const proofPendingAtom = atom(get => get(currentProofAtom) === undefined)
 
 
 

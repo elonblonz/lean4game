@@ -24,6 +24,10 @@ export const inventoryOverviewAtom = atomWithQuery<InventoryOverview>((get) => {
   }
 })
 
+/** Doc atoms are looked up with a new `[type, name]` array on every render: compare by value,
+ * or each render would create (and subscribe to) a new query, which re-renders, and so on. */
+const sameDocKey = (a: [InventoryTab, string], b: [InventoryTab, string]) => a[0] === b[0] && a[1] === b[1]
+
 export const docAtomFamily = atomFamily((key: [InventoryTab, string]) => atomWithQuery<Doc>((get) => {
   const gameId = get(gameIdAtom)
   const type = key[0]
@@ -35,7 +39,7 @@ export const docAtomFamily = atomFamily((key: [InventoryTab, string]) => atomWit
       return res.json()
     },
   }
-}))
+}), sameDocKey)
 
 export const docAtomLegacyFamily = atomFamily((key: [InventoryTab, string]) => atomWithQuery<Doc>((get) => {
   const gameId = get(gameIdAtom)
@@ -50,7 +54,7 @@ export const docAtomLegacyFamily = atomFamily((key: [InventoryTab, string]) => a
       return res.json()
     },
   }
-}))
+}), sameDocKey)
 
 function capitalizeFirstLetter(val: InventoryTab) {
   return String(val).charAt(0).toUpperCase() + String(val).slice(1);

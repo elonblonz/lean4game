@@ -43,7 +43,8 @@ export function InventoryItem({tile, isTheorem, recent=false, enableAll=false} :
     // navigator.clipboard.writeText(tile.displayName)
     appendTypewriterInput(ev.shiftKey, tile.displayName, isTheorem, false)
     setInserted(true)
-    setInterval(() => {
+    // Show "inserted" for a moment.
+    setTimeout(() => {
       setInserted(false)
     }, 3000);
     ev.stopPropagation()
