@@ -39,6 +39,38 @@
   color: var(--vscode-breadcrumb-foreground);
 }
 
+/* Small screens: use (almost) the full screen, less padding, scrollbar only when needed. */
+@media (max-width: 600px) {
+  .modal {
+    box-sizing: border-box;
+    min-width: 0;
+    width: calc(100% - 1.5rem);
+    max-height: calc(100% - 1.5rem);
+    padding: 1.25em;
+    overflow: auto;
+  }
+
+  .modal table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  /* Preferences: the layout slider has a fixed width of 300px */
+  .modal .preferences-item.leave-left-gap {
+    margin-left: 1.5em;
+    margin-right: 1.5em;
+  }
+
+  .modal .preferences-item.leave-left-gap .MuiFormControlLabel-root {
+    display: flex;
+    margin: 0;
+  }
+
+  .modal .preferences-item.leave-left-gap .MuiBox-root {
+    max-width: 100%;
+  }
+}
+
 .modal input[type="text"] {
   width: 100%;
 }

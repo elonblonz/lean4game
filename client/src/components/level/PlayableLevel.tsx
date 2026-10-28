@@ -32,6 +32,8 @@ export function PlayableLevel() {
 
   // Only for mobile layout
   const [pageNumber, setPageNumber] = useState(0)
+  // Show the proof again when another level is opened
+  useEffect(() => { setPageNumber(0) }, [worldId, levelId])
   // set to true to prevent switching between typewriter and editor
   const [lockEditorMode] = useAtom(lockEditorModeAtom)
   const [, setTypewriterInput] = useState("")
@@ -257,12 +259,18 @@ export function PlayableLevel() {
       pageNumber={pageNumber} setPageNumber={setPageNumber}
       isLoading={levelInfoIsLoading}
       levelTitle={(mobile ? "" : t("Level")) + ` ${levelId} / ${worldId ? gameInfo?.worldSize?.[worldId] ?? "" : ""}` +
-        (levelInfo?.title && ` : ${gT(levelInfo?.title ?? "")}`)}
+        (levelInfo?.title ? ` : ${gT(levelInfo.title)}` : "")}
       />
     {mobile?
       // TODO: This is copied from the `Split` component below...
       <>
         <div className={`app-content level-mobile ${levelInfoIsLoading ? 'hidden' : ''}`}>
+          <div className="mobile-page-switch" role="tablist">
+            <button role="tab" aria-selected={pageNumber == 0} className={pageNumber == 0 ? "active" : ""}
+              onClick={() => setPageNumber(0)}>{t("Proof")}</button>
+            <button role="tab" aria-selected={pageNumber == 1} className={pageNumber == 1 ? "active" : ""}
+              onClick={() => setPageNumber(1)}>{t("Inventory")}</button>
+          </div>
           <ExercisePanel codeviewRef={codeviewRef} visible={pageNumber == 0} />
           <InventoryPanel levelInfo={levelInfo} visible={pageNumber == 1} />
         </div>

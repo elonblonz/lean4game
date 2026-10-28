@@ -25,6 +25,7 @@ const r = 16              // radius of a level
 const s = 10              // global scale
 const lineWidth = 10      //
 const ds = .75  // scale the resulting svg image
+const dsMobile = 1.25  // larger on touch screens, so that level icons are big enough to tap
 
 const NMIN = 5   // min. worldsize
 const NLABEL = 8 // max. world size to display label below the world
@@ -218,7 +219,7 @@ export function WorldSelectionMenu() {
           className='helpButton' />
       </span>
       <Slider
-        orientation="vertical"
+        orientation={mobile ? "horizontal" : "vertical"}
         title={t("Game Rules")}
         min={0} max={2}
         aria-label={t("Game Rules")}
@@ -276,6 +277,7 @@ export function computeWorldLayout(worlds: {nodes: {[id:string]: {id: string, ti
 
 export function WorldTreePanel() {
   const [gameId] = useAtom(gameIdAtom)
+  const [mobile] = useAtom(mobileAtom)
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
 
   const worlds = gameInfo?.worlds
@@ -292,7 +294,17 @@ export function WorldTreePanel() {
       // of these positions to scroll to.
       let elem = elems[0]
       console.debug(`scrolling to ${elem.textContent}`)
-      elem.scrollIntoView({block: "center"})
+      // Scroll only the tree: `scrollIntoView` would also scroll the surrounding panel
+      // sideways when the tree is wider than the screen.
+      const tree = elem.closest(".world-tree")
+      if (tree) {
+        const e = elem.getBoundingClientRect()
+        const t = tree.getBoundingClientRect()
+        tree.scrollTo({
+          left: tree.scrollLeft + e.left - t.left - (t.width - e.width) / 2,
+          top: tree.scrollTop + e.top - t.top - (t.height - e.height) / 2,
+        })
+      }
     }
   }, [worlds, worldSize])
 
@@ -343,9 +355,9 @@ export function WorldTreePanel() {
   return (
     <div className="panel">
       <WorldSelectionMenu />
-      <div className="world-tree">
+      <div className={`world-tree${mobile ? ' mobile' : ''}`}>
         <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
-            width={bounds ? `${ds * dx}` : ''}
+            width={bounds ? `${(mobile ? dsMobile : ds) * dx}` : ''}
             viewBox={bounds ? `${s*bounds.x1 - padding} ${s*bounds.y1 - padding} ${dx} ${s*(bounds.y2 - bounds.y1) + 2 * padding}` : ''}
             className="world-selection" >
           {svgElements}

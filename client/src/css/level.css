@@ -201,6 +201,48 @@ td code  {
   text-align: center;
 }
 
+/* Mobile level: hints button, completion message and Next below the proof steps */
+.mobile-level-footer .button-row.mobile {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.mobile-level-footer .button-row.mobile:empty {
+  display: none;
+}
+
+.mobile-level-footer .message {
+  margin: .5rem;
+}
+
+/* Mobile level: segmented control switching between proof and inventory */
+.mobile-page-switch {
+  flex-shrink: 0;
+  display: flex;
+  margin: .5rem;
+  border: 1px solid var(--clr-primary);
+  border-radius: .3rem;
+  overflow: hidden;
+}
+
+.mobile-page-switch button {
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  margin: 0;
+  background: white;
+  color: var(--clr-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.mobile-page-switch button.active {
+  background: var(--clr-primary);
+  color: white;
+}
+
 
 .typewriter-interface {
   display: flex;
