@@ -16,6 +16,22 @@ interface Player {
   process: ChildProcess
 }
 
+/** Optional limits on Lean sessions (each one needs a Lean server, about 2 GB of memory). */
+const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS ?? '') || 0           // 0: no limit
+const MAX_SESSIONS_PER_IP = parseInt(process.env.MAX_SESSIONS_PER_IP ?? '') || 0
+/** Close a session after this many minutes without a message from the client (0: never). */
+const IDLE_TIMEOUT_MIN = parseInt(process.env.IDLE_TIMEOUT_MIN ?? '') || 30
+
+/** The client's IP address. `X-Forwarded-For` is only trusted behind a proxy (`TRUST_PROXY`). */
+export function clientIp(req: IncomingMessage): string | undefined {
+  const forwarded = req.headers['x-forwarded-for']
+  if (process.env.TRUST_PROXY && typeof forwarded === 'string' && forwarded) {
+    // The proxy appends the address it saw; the first entry is the client's.
+    return forwarded.split(',')[0].trim()
+  }
+  return req.socket.remoteAddress
+}
+
 interface PlayerMeasurement {
   date: Array<Date>
   anon_Ip: Array<string>
@@ -76,8 +92,26 @@ export class GameSessionsObserver {
    * @param wss
    */
   startObservedGame(ws: WebSocket, req: IncomingMessage) {
-    const ip = anonymize(req.headers['x-forwarded-for'] as string || req.socket.remoteAddress);
-    let gameSession: GameSession = this.gameManager.startGame(req, ip)
+    const ip = anonymize(clientIp(req) ?? '') || 'unknown'
+
+    const sessions = [...this.players.values()]
+    if (MAX_SESSIONS && sessions.length >= MAX_SESSIONS) {
+      console.warn(`[${new Date()}] Refused a connection from ${ip}: ${sessions.length} sessions are open`)
+      ws.close(1013, 'The server is busy, please try again later.')
+      return
+    }
+    if (MAX_SESSIONS_PER_IP && sessions.filter(p => p.anonIP === ip).length >= MAX_SESSIONS_PER_IP) {
+      console.warn(`[${new Date()}] Refused a connection from ${ip}: too many sessions from this address`)
+      ws.close(1013, 'Too many open games from your address.')
+      return
+    }
+
+    let gameSession: GameSession | undefined = this.gameManager.startGame(req, ip)
+    if (!gameSession) {
+      // Unknown game, or the Lean server could not be started (logged in `startGame`).
+      ws.close(1008, 'Unknown game')
+      return
+    }
     let ps = gameSession.process
     let game = gameSession.game
     let gameDir = gameSession.gameDir
@@ -131,11 +165,25 @@ export class GameSessionsObserver {
     //console.log(`[${new Date()}] Number of open sockets - ${this.socketCounter}`);
     //console.log(`[${new Date()}] Free RAM - ${Math.round(os.freemem() / 1024 / 1024)} / ${Math.round(os.totalmem() / 1024 / 1024)} MB`);
 
+    // Free the Lean server of a session that has been left alone.
+    let idleTimer: ReturnType<typeof setTimeout> | undefined
+    const resetIdleTimer = () => {
+      if (!IDLE_TIMEOUT_MIN) return
+      clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        console.log(`[${new Date()}] Closing idle session of ${ip} on ${game}`)
+        ws.close(1000, 'Closed after a period of inactivity')
+      }, IDLE_TIMEOUT_MIN * 60 * 1000)
+    }
+    resetIdleTimer()
+    ws.on('message', resetIdleTimer)
+
     ws.on('close', () => {
+      clearTimeout(idleTimer)
       const player = this.players.get(ws)
       this.players.delete(ws)
       //this.socketCounter--
-      console.log(`[${new Date()}] Socket closed by ${ip} on ${player.currentGame}`)
+      console.log(`[${new Date()}] Socket closed by ${ip} on ${player?.currentGame}`)
     })
   }
 

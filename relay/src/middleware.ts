@@ -1,4 +1,4 @@
-import { exec } from 'child_process'
+import { execFile } from 'child_process'
 import fs from 'fs'
 import anonymize from 'ip-anonymize'
 import { Octokit } from 'octokit'
@@ -9,65 +9,54 @@ import { AccessLogger, Connection } from './services/AccessLogger.js'
 import { Request, Response } from 'express'
 
 const TOKEN = process.env.LEAN4GAME_GITHUB_TOKEN
-const RESERVED_DISK_SPACE_MB: number = parseInt(process.env.RESERVED_DISC_SPACE_MB)
-const DISK_INFO_CMD_MB = 'df -BM'
+/** Imports are refused if they would leave less free disk space than this (in MB). */
+const RESERVED_DISK_SPACE_MB: number = parseInt(process.env.RESERVED_DISC_SPACE_MB ?? '') || 1024
 const octokit = new Octokit({auth: TOKEN})
 const accessLogger = new AccessLogger()
 
-function checkDiskSpace(path) {
+/** The free disk space (in MB) on the file system that contains `dir`. */
+function freeDiskSpaceMB(dir: string) {
   return new Promise<number>((resolve, reject) => {
-    exec(DISK_INFO_CMD_MB, path, (error, stdout, stderr) => {
+    execFile('df', ['-BM', '--output=avail', dir], (error, stdout) => {
       if (error) {
         return reject(new Error(`Error checking disk space: ${error.message}`))
       }
-
-      const lines = stdout.toString().trim().split('\n')
-      if (lines.length < 2){
-        return reject(new Error(`Invalid disk information output`))
+      const free = parseInt(stdout.toString().trim().split('\n').pop()?.replace('M', '') ?? '')
+      if (isNaN(free)) {
+        return reject(new Error(`Invalid disk information output: ${stdout}`))
       }
-
-      const stats = lines[1].split(/\s+/)
-      const usedDiskSpace = parseInt(stats[3].replace('M', ''))
-
-      resolve(usedDiskSpace)
+      resolve(free)
     })
   })
 }
 
-function getGitHubArtifactInformation(owner, repo){
-  return new Promise<number>(async (resolve, reject) =>{
-    const artifacts =  octokit.request('GET /repos/{owner}/{repo}/actions/artifacts', {
-      owner,
-      repo,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    })
-
-    const artifact = (await artifacts).data.artifacts.reduce(
-      (acc, cur) => acc.created_at < cur.created_at ? cur : acc)
-
-    resolve(artifact.size_in_bytes)
+/** The size (in bytes) of the newest build artifact of a GitHub repository. */
+async function latestArtifactSize(owner: string, repo: string): Promise<number> {
+  const { data } = await octokit.request('GET /repos/{owner}/{repo}/actions/artifacts', {
+    owner,
+    repo,
+    headers: {
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
   })
+  if (!data.artifacts.length) {
+    throw new Error(`${owner}/${repo} has no build artifacts.`)
+  }
+  return data.artifacts.reduce((acc, cur) => acc.created_at < cur.created_at ? cur : acc).size_in_bytes
 }
 
-// TODO: Game directory has to be set correctly. Currently games are sourced from dist/games which is not correct
-export function safeImport(owner, repo, id, importFunc) {
-  return new Promise<void>((resolve, reject) => {
-    const rootPath = '/'
-    checkDiskSpace(rootPath).then(async usedDiskSpace => {
-      const artifactByte = await getGitHubArtifactInformation(owner, repo)
-      const artifactMB = Math.ceil(artifactByte / Math.pow(1024, 2))
-
-      if (usedDiskSpace + artifactMB >= RESERVED_DISK_SPACE_MB) {
-        return reject(new Error(`[${new Date()}] ABORT IMPORT: Uploading file of size ${artifactMB} (MB) by ${owner} would exceed allocated memory of ${RESERVED_DISK_SPACE_MB} on the server.`))
-      }
-
-      importFunc(owner, repo, id)
-      return resolve(console.log(`[${new Date()}] ${owner} uploaded file of size ${artifactMB} (MB).
-      Remaining reserved memory amounts to ${RESERVED_DISK_SPACE_MB - usedDiskSpace + artifactMB} (MB)`))
-    })
-  })
+/** Import a game with `importFunc`, unless its artifact would leave too little free disk space. */
+export async function safeImport(owner: string, repo: string, id: string, gamesPath: string,
+    importFunc: (owner: string, repo: string, id: string) => Promise<void>) {
+  fs.mkdirSync(gamesPath, { recursive: true })
+  const free = await freeDiskSpaceMB(gamesPath)
+  const artifactMB = Math.ceil(await latestArtifactSize(owner, repo) / Math.pow(1024, 2))
+  if (free - artifactMB < RESERVED_DISK_SPACE_MB) {
+    throw new Error(`Importing ${owner}/${repo} (${artifactMB} MB) would leave less than ` +
+      `${RESERVED_DISK_SPACE_MB} MB of free disk space (${free} MB free).`)
+  }
+  console.log(`[${new Date()}] Importing ${owner}/${repo} (${artifactMB} MB, ${free} MB free).`)
+  await importFunc(owner, repo, id)
 }
 
 export function logConnection(req: Request, res: Response): void {

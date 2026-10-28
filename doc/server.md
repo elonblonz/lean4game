@@ -9,9 +9,10 @@ You need to set the environment variables `LEAN4GAME_GITHUB_USER` and `LEAN4GAME
 with your user name and access token. For example, you can set these in `ecosystem.config.cjs` if
 you're using `pm2`
 
-Then people can call:
+Imports download and install a game, so they are disabled unless you also set `IMPORT_TOKEN`.
+Then you (or a workflow that knows the token) can call:
 
-> https://{website}/import/trigger/{owner}/{repo}
+> https://{website}/import/trigger/{owner}/{repo}?token={IMPORT_TOKEN}
 
 where you replace:
 - website: The website your server runs on, e.g. `localhost:3000`
@@ -21,6 +22,29 @@ where you replace:
  Once this import reports "Done", you should be able to play your game under:
 
 > https://{website}/#/g/{owner}/{repo}
+
+## Limits and other settings
+
+Environment variables of the relay (`relay/src`):
+
+- `MAX_SESSIONS`: the most game sessions at the same time (default: no limit). Each session runs
+  its own Lean server, which needs about 2 GB of memory; new connections beyond the limit are
+  refused with "The server is busy".
+- `MAX_SESSIONS_PER_IP`: the most sessions from one (anonymized) address (default: no limit).
+  Note that a school or office behind one router shares an address.
+- `IDLE_TIMEOUT_MIN`: close a session after this many minutes without a message from the
+  player (default: 30; `0` keeps sessions open).
+- `TRUST_PROXY`: set it when the relay runs behind a reverse proxy, so that the client address
+  is taken from `X-Forwarded-For`. Without a proxy, leave it unset: the header can be faked.
+- `API_PORT`: the port of the statistics API. It only listens on `127.0.0.1`, and only if set.
+- `RESERVED_DISC_SPACE_MB`: imports are refused if they would leave less free disk space than
+  this (default: 1024).
+
+Lean runs the players' proofs, and Lean code can run programs. In production, Lean runs inside
+`bubblewrap` (`relay/scripts/bubblewrap.sh`: no network, read-only game files, a CPU time limit).
+Never run a public server in development mode (`NODE_ENV=development`), which runs Lean without
+the sandbox. The sandbox does not limit memory: run the server in a container or cgroup with a
+memory limit (for example `docker run --memory=...`, or `systemd-run -p MemoryMax=...`).
 
 ## Data management
 Everything downloaded remains in the folder `lean4game/games`.

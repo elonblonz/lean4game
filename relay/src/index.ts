@@ -7,7 +7,7 @@ import { importTrigger, importStatus } from './import.js'
 import process from 'process';
 import { spawn } from 'child_process'
 import { GameManager } from './serverProcess.js';
-import { GameSessionsObserver } from './websocket.js';
+import { clientIp, GameSessionsObserver } from './websocket.js';
 import { WebSocketServer } from 'ws';
 import { gameActivityStore } from './services/GameActivityStore.js';
 import { announcementsHandler } from './announcements.js';
@@ -25,6 +25,20 @@ const API = process.env.API_PORT
 
 const environment = process.env.NODE_ENV;
 const isDevelopment = environment === 'development';
+
+// Keep serving other players if handling one request or message fails.
+process.on('uncaughtException', error => console.error(`[${new Date()}] Uncaught exception:`, error))
+process.on('unhandledRejection', error => console.error(`[${new Date()}] Unhandled rejection:`, error))
+
+/** The game's directory, or `undefined` (and a 404) if there is no such game. */
+function gameDirOr404(owner: string, repo: string, res: any): string | undefined {
+  const dir = gameManager.getGameDir(owner, repo)
+  if (!dir) res.status(404).send('Unknown game')
+  return dir || undefined
+}
+
+/** `/data/stats` runs a script; answer repeated requests from a cache. */
+let statsCache: { time: number, output: string } | undefined
 
 async function registerInstalledGames() {
   const gamesPath = path.join(process.cwd(), 'games')
@@ -60,7 +74,10 @@ const server = app
     const repo = req.params.repo
     const lang = req.params.lang
 
-    const anon_ip = anonymize(req.headers['x-forwarded-for'] as string || req.socket.remoteAddress)
+    if (!/^[\w-]+$/.test(lang)) { res.status(404).send('Unknown language'); return }
+    const gameDir = gameDirOr404(owner, repo, res)
+    if (!gameDir) return
+    const anon_ip = anonymize(clientIp(req) ?? '')
     const log = path.join(process.cwd(), 'logs', 'game-access.log')
     const header = "date;anon-ip;game;lang\n"
     const data = `${new Date()};${anon_ip};${owner}/${repo};${lang}\n`
@@ -83,7 +100,7 @@ const server = app
 
     req.url = "Game.json";
     const staticHandler = express.static(
-      path.join(gameManager.getGameDir(owner, repo), ".i18n", lang),
+      path.join(gameDir, ".i18n", lang),
       { fallthrough: true }
     );
     staticHandler(req, res, (err) => {
@@ -97,9 +114,11 @@ const server = app
     const owner = req.params.owner;
     const repo = req.params.repo
     const filename = req.params.path.join('/');
+    const gameDir = gameDirOr404(owner, repo, res)
+    if (!gameDir) return
     req.url = filename;
     const staticHandler = express.static(
-      path.join(gameManager.getGameDir(owner,repo),".lake","gamedata"),
+      path.join(gameDir,".lake","gamedata"),
       { fallthrough: true }
     );
     staticHandler(req, res, (err) => {
@@ -110,6 +129,10 @@ const server = app
     });
   })
   .use('/data/stats', (req, res, next) => {
+    if (statsCache && Date.now() - statsCache.time < 10_000) {
+      res.send(statsCache.output)
+      return
+    }
     const statsScriptPath =
       process.platform !== 'win32'
         ? path.join(__dirname, "..", "..", "scripts", "stats.sh")
@@ -126,6 +149,7 @@ const server = app
     })
     statsProcess.on('close', (code) => {
       if (code === 0) {
+        statsCache = { time: Date.now(), output: outputData }
         res.send(outputData);
       } else {
         res.status(500).send(`Error executing script: ${errorData}`)
@@ -207,10 +231,18 @@ const server = app
   .use('/', router)
   .listen(PORT, () => console.log(`Server listening on ${PORT}`));
 
-const webSocketServer: WebSocketServer = new WebSocketServer({ server });
+// LSP messages from the client are small; refuse huge ones.
+const webSocketServer: WebSocketServer = new WebSocketServer({ server, maxPayload: 4 * 1024 * 1024 });
 const observerService = new GameSessionsObserver(gameManager, webSocketServer)
 const observer = express()
-webSocketServer.addListener("connection", (ws, req) => { observerService.startObservedGame(ws, req) })
+webSocketServer.addListener("connection", (ws, req) => {
+  try {
+    observerService.startObservedGame(ws, req)
+  } catch (error) {
+    console.error(`[${new Date()}] Failed to start a game session:`, error)
+    ws.close(1011, 'Failed to start the game')
+  }
+})
 //webSocketServer.on("connection", (ws, req) => { observerService.startObservedGame(ws, req) })
 
 /**
@@ -228,4 +260,8 @@ observer.use('/api/game-sessions', (req, res) => {
       res.status(500).json({ error: 'Failed to read game activity' })
     }
   })
-.listen(API, () => console.log(`API listening on ${API}`));
+
+// The statistics API is for the server's admins: only on this machine, and only if configured.
+if (API) {
+  observer.listen(parseInt(API), '127.0.0.1', () => console.log(`API listening on 127.0.0.1:${API}`))
+}

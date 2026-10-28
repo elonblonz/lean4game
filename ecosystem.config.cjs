@@ -6,7 +6,10 @@ module.exports = {
     env: {
       LEAN4GAME_GITHUB_USER: "",
       LEAN4GAME_GITHUB_TOKEN: "",
-      RESERVED_DISC_SPACE_MB: 0,
+      // Keep at least this much disk space free when importing games.
+      RESERVED_DISC_SPACE_MB: 1024,
+      // Imports run only with `?token=<IMPORT_TOKEN>`; leave empty to disable them.
+      IMPORT_TOKEN: "",
       ISSUE_CONTACT: "",
       NODE_ENV: "production",
       PORT: 8002,

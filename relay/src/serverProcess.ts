@@ -5,6 +5,7 @@ import * as jsonrpcserver from 'vscode-ws-jsonrpc/server';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import { applyContentChanges } from './textChanges.js';
 
 type Tag = { owner: string; repo: string; };
 export type GameSession = {
@@ -215,8 +216,17 @@ export class GameManager {
 
 
     // These values will be set by the initialize message
-    let difficulty: number
-    let inventory: string[]
+    // The player's rules setting and unlocked items, sent by the client (`$/lean4game/options`).
+    // Until then: the client's default (regular rules), nothing unlocked.
+    let difficulty: number = 2
+    let inventory: string[] = []
+    let optionsReceived = false
+
+    /** Accept only what can safely go into the Lean header: rules 0-2, and names that are
+     * plain Lean string literals (no quotes, backslashes or control characters). */
+    const validDifficulty = (d: any) => Number.isInteger(d) && d >= 0 && d <= 2
+    const validInventory = (inv: any) => Array.isArray(inv) && inv.length <= 10000 &&
+      inv.every(s => typeof s === 'string' && /^[^\u0000-\u001f\u007f"\\]{1,200}$/.test(s))
     let worldId: string
     let levelId: string
 
@@ -249,24 +259,9 @@ export class GameManager {
     let activeUri: string | undefined
     /** The client URI that messages from Lean are about (the last level opened in Lean). */
     let serverDocUri: string | undefined
-
-    /** Apply LSP content changes (positions in UTF-16 code units, like JS strings) to `text`. */
-    const applyChanges = (text: string, changes: any[]) => {
-      for (const change of changes) {
-        if (!change.range) { text = change.text; continue }
-        const offset = (pos: { line: number, character: number }) => {
-          let i = 0
-          for (let l = 0; l < pos.line; l++) {
-            const nl = text.indexOf('\n', i)
-            if (nl < 0) return text.length
-            i = nl + 1
-          }
-          return Math.min(i + pos.character, text.length)
-        }
-        text = text.slice(0, offset(change.range.start)) + change.text + text.slice(offset(change.range.end))
-      }
-      return text
-    }
+    /** The version the current level was opened in Lean with. Diagnostics and progress for
+     * older versions are from the previous level's worker, still on their way. */
+    let openedVersion = 0
 
     /** The `didOpen` that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
     const openInServer = (uri: string): object | undefined => {
@@ -281,12 +276,6 @@ export class GameManager {
       }
       const levelData = JSON.parse(fs.readFileSync(levelDataPath, 'utf8'))
       onLevelOpened?.()
-
-      if (difficulty === undefined || inventory === undefined) {
-        console.error("Did not receive difficulty/inventory from client!")
-        difficulty = 1
-        inventory = []
-      }
       // Note: `LevelScope` and `Runner` have to stay on the same line as each other so that
       // the proof still starts on line `PROOF_START_LINE`.
       const levelIdArgs =
@@ -299,6 +288,7 @@ export class GameManager {
         `(inventory := [${inventory.map(s => JSON.stringify(s)).join(',')}]) ` +
         `:= by\n${doc.text}\n`
       serverDocUri = uri
+      openedVersion = doc.version
       return { jsonrpc: "2.0", method: "textDocument/didOpen",
         params: { textDocument: { uri: metadataUri, languageId: "lean4", version: doc.version, text } } }
     }
@@ -328,11 +318,30 @@ export class GameManager {
     /** Translate one message from the client into the messages to send to Lean. */
     const fromClient = (message: any): object[] => {
       if (message.method === "initialize") {
-        difficulty = message.params.initializationOptions.difficulty
-        inventory = message.params.initializationOptions.inventory
+        const options = message.params?.initializationOptions ?? {}
+        if (validDifficulty(options.difficulty)) difficulty = options.difficulty
+        if (validInventory(options.inventory)) inventory = options.inventory
         // We abuse the rootUri field to pass the game name to the server
         message.params.rootUri = gameData.name
         return [message]
+      }
+
+      if (message.method === "$/lean4game/options") {
+        // The player's rules and inventory, which go into the level's header. The client can
+        // only send them once its connection is running, i.e. after it opened the first level:
+        // then open that level again if it was opened with different values. Later, a change of
+        // the rules reopens the level, while a new inventory (after completing a level) applies
+        // from the next level on.
+        const options = message.params ?? {}
+        const newDifficulty = validDifficulty(options.difficulty) ? options.difficulty : difficulty
+        const newInventory = validInventory(options.inventory) ? options.inventory : inventory
+        const first = !optionsReceived
+        optionsReceived = true
+        const changed = newDifficulty !== difficulty ||
+          (first && JSON.stringify(newInventory) !== JSON.stringify(inventory))
+        difficulty = newDifficulty
+        inventory = newInventory
+        return changed && activeUri !== undefined ? activate(activeUri) : []
       }
 
       const params = message.params ?? {}
@@ -346,7 +355,7 @@ export class GameManager {
       if (message.method === "textDocument/didChange") {
         const doc = clientDocs.get(uri!)
         if (!doc) return []
-        doc.text = applyChanges(doc.text, params.contentChanges)
+        doc.text = applyContentChanges(doc.text, params.contentChanges)
         doc.version = params.textDocument.version
         if (uri !== activeUri) return activate(uri!)  // sends the whole new text
       } else if (message.method === "textDocument/didClose") {
@@ -357,7 +366,10 @@ export class GameManager {
         // The client starts working on a level it opened before, without changing it.
         if (!clientDocs.has(uri)) { replyError(message, -32801, `Unknown document ${uri}`); return [] }
         const out = activate(uri)
-        if (uri !== activeUri) { replyError(message, -32801, `Cannot open level ${uri}`); return [] }
+        if (uri !== activeUri) {
+          replyError(message, -32801, `Cannot open level ${uri}`)
+          return out  // still close the previous level
+        }
         return [...out, message]
       } else if (uri !== undefined && uri !== activeUri) {
         // A message about a level that isn't open in Lean, e.g. from before switching levels.
@@ -388,7 +400,16 @@ export class GameManager {
         return
       }
 
-      for (const out of fromClient(message)) {
+      let outs: object[]
+      try {
+        outs = fromClient(message)
+      } catch (error) {
+        // Don't lose the message silently (exceptions here are swallowed by the reader).
+        console.error(`[${new Date()}] Failed to translate a message from the client:`, error, JSON.stringify(message).slice(0, 500))
+        if (message?.id !== undefined && message?.method) replyError(message, -32603, 'The game server could not handle this request')
+        return
+      }
+      for (const out of outs) {
         replaceUri(out, metadataUri)
         if ((out as any).method === "textDocument/semanticTokens/full") {
           semanticTokenRequestIds.add((out as any).id)
@@ -401,8 +422,8 @@ export class GameManager {
     });
 
 
-    /** Sending messages from the server to the client */
-    serverConnection.forward(socketConnection, message => {
+    /** Translate one message from Lean for the client, or `undefined` to drop it. */
+    const fromServer = (message: any): object | undefined => {
       if ((message as any)?.error) {
         console.error(`[${new Date()}] SERVER->CLIENT error payload: ${JSON.stringify((message as any).error)}`)
       }
@@ -413,6 +434,11 @@ export class GameManager {
       // backwards compatibility for versions ≤ v4.7.0
       if (usesCustomLeanServer) return message
 
+      // Late diagnostics and progress of the previous level (see `openedVersion`).
+      const version = message.method === "textDocument/publishDiagnostics" ? message.params?.version
+        : message.method === "$/lean/fileProgress" ? message.params?.textDocument?.version : undefined
+      if (typeof version === 'number' && version < openedVersion) return undefined
+
       shiftLines(message, -PROOF_START_LINE);
       if (serverDocUri !== undefined) replaceUri(message, serverDocUri)
 
@@ -422,7 +448,7 @@ export class GameManager {
       }
 
       // Shift semantic tokens (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens)
-      if (semanticTokenRequestIds.delete((message as any)?.id)) {
+      if (semanticTokenRequestIds.delete((message as any)?.id) && Array.isArray((message as any).result?.data)) {
         const data : number[] = (message as any).result.data
         let i = 0
         let newData = []
@@ -443,10 +469,28 @@ export class GameManager {
       }
 
       return message
+    }
+
+    /** Sending messages from the server to the client */
+    serverConnection.reader.listen((message: any) => {
+      let out: object | undefined
+      try {
+        out = fromServer(message)
+      } catch (error) {
+        console.error(`[${new Date()}] Failed to translate a message from Lean:`, error, JSON.stringify(message).slice(0, 500))
+        out = message
+      }
+      if (out !== undefined) socketConnection.writer.write(out as any)
     });
   }
 
   getGameDir(owner: string, repo: string) {
+    // Plain names only: they become paths.
+    const validName = (name: string) => /^[A-Za-z0-9_.-]+$/.test(name) && name !== '.' && name !== '..'
+    if (!validName(owner) || !validName(repo)) {
+      console.error(`[${new Date()}] Invalid game name: ${owner}/${repo}`);
+      return "";
+    }
     owner = owner.toLowerCase();
     if (owner == 'local' && !isDevelopment) {
       console.error(`[${new Date()}] No local games in production mode.`);

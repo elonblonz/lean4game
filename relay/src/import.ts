@@ -13,6 +13,15 @@ const __dirname = path.dirname(__filename);
 const TOKEN = process.env.LEAN4GAME_GITHUB_TOKEN
 const USERNAME = process.env.LEAN4GAME_GITHUB_USER
 const CONTACT = process.env.ISSUE_CONTACT
+/** Imports download and install games, so they need this token (`?token=...`); unset, they are off. */
+const IMPORT_TOKEN = process.env.IMPORT_TOKEN
+
+/** The games folder, and the folder downloads are unpacked in. */
+const gamesPath = path.join(__dirname, "..", "..", "..", "games")
+const gamesTmpPath = path.join(gamesPath, "tmp")
+
+const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
 
 const octokit = new Octokit({
   auth: TOKEN
@@ -100,9 +109,6 @@ async function doImport (owner, repo, id) {
     const unpackingScript = path.join(__dirname, "..", "..", "scripts", "unpack.sh")
     const toolchainScript = path.join(__dirname, "..", "..", "scripts", "install_toolchain.sh")
 
-    const gamesPath = path.join(__dirname, "..", "..", "..", "games");
-    const gamesTmpPath = path.join(__dirname, "..", "..", "..", "games", "tmp");
-
     // Make sure the download folder exists
     if (!fs.existsSync(gamesPath)){
       fs.mkdirSync(gamesPath);
@@ -111,7 +117,7 @@ async function doImport (owner, repo, id) {
       fs.mkdirSync(gamesTmpPath);
     }
     progress[id].output += `Download from ${url}\n`
-    await download(id, url, path.join(__dirname, "..", "..", "..", "games", "tmp", `${owner.toLowerCase()}_${repo.toLowerCase()}_${artifactId}.zip`))
+    await download(id, url, path.join(gamesTmpPath, `${owner.toLowerCase()}_${repo.toLowerCase()}_${artifactId}.zip`))
     progress[id].output += `Download finished.\n`
 
     // Unpack downloaded game
@@ -149,8 +155,9 @@ async function doImport (owner, repo, id) {
   } finally {
     // clean-up temp. files
     if (artifactId) {
-      fs.rmSync(path.join(__dirname, "..", "games", "tmp", `${owner}_${repo}_${artifactId}.zip`), {force: true, recursive: false});
-      fs.rmSync(path.join(__dirname, "..", "games", "tmp", `${owner}_${repo}_${artifactId}`), {force: true, recursive: true});
+      const name = `${owner.toLowerCase()}_${repo.toLowerCase()}_${artifactId}`
+      fs.rmSync(path.join(gamesTmpPath, `${name}.zip`), {force: true, recursive: false});
+      fs.rmSync(path.join(gamesTmpPath, name), {force: true, recursive: true});
     }
     progress[id].done = true
   }
@@ -161,16 +168,22 @@ export const importTrigger = (req, res) => {
   const owner = req.params.owner
   const repo = req.params.repo
   const id = req.params.owner + '/' + req.params.repo
-  if(!/^[\w.-]+\/[\w.-]+$/.test(id)) { res.send(`Invalid repo name ${id}`); return }
+  if (!IMPORT_TOKEN || req.query.token !== IMPORT_TOKEN) {
+    res.status(403).send("Imports are disabled on this server, or the token is wrong.")
+    return
+  }
+  if(!/^[\w.-]+\/[\w.-]+$/.test(id) || owner.startsWith('.') || repo.startsWith('.')) {
+    res.status(400).send(`Invalid repo name ${escapeHtml(id)}`); return
+  }
 
   if(!progress[id] || progress[id].done) {
     progress[id] = {output: "", done: false}
-    safeImport(owner, repo, id, doImport)
+    safeImport(owner, repo, id, gamesPath, doImport)
     .catch((err: Error) => {
-      progress[id].output += `Upload of file would exceed allocated memory on the server.\n
-      Please notify server admins via <a href=${CONTACT}>the LEAN zulip instance</a> to resolve
-      this issue.`
-      throw err
+      console.error(`[${new Date()}] Import of ${id} failed: ${err.message}`)
+      progress[id].output += `Import failed: ${err.message}\n` +
+        (CONTACT ? `Please contact the server admins: ${CONTACT}\n` : '')
+      progress[id].done = true
     })
   }
 
@@ -181,5 +194,5 @@ export const importStatus = (req, res) => {
   const owner = req.params.owner
   const repo = req.params.repo
   const id = req.params.owner + '/' + req.params.repo
-  res.send(`<html><head><meta http-equiv="refresh" content="5"></head><body><pre>${progress[id]?.output ?? "Nothing here."}</pre></body></html>`)
+  res.send(`<html><head><meta http-equiv="refresh" content="5"></head><body><pre>${escapeHtml(progress[id]?.output ?? "Nothing here.")}</pre></body></html>`)
 }
