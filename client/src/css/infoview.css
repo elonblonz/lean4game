@@ -18,6 +18,12 @@
   background-color: #FFBABA;
 }
 
+/* Mobile: wrap long error lines instead of cutting them off at the screen edge. */
+.level-mobile .message pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .message.deleted-hint {
   background-color: #eee;
   color: #777;
