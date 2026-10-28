@@ -25,6 +25,7 @@ import i18n from './i18n';
 import { Popup } from './components/popup/popup';
 import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/editor-atoms';
 import { LeanMonaco } from 'lean4monaco';
+import * as monaco from 'monaco-editor';
 import { darkModeAtom, preferencesAtom } from './store/preferences-atoms';
 
 /** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `app.css`. */
@@ -69,11 +70,14 @@ function App({ children }: { children?: React.ReactNode }) {
   // Monaco's theme is global. `LeanMonaco.start` sets it from the browser setting, so this
   // overrides it once LeanMonaco is ready. The theme is deliberately not part of
   // `leanMonacoOptionsAtom`: changing those options restarts the Lean connection.
+  // The standalone editors (e.g. the typewriter command line) only follow `setTheme`;
+  // the workbench setting is kept in step for everything else that reads it.
   useEffect(() => {
     if (!leanMonaco) return
     let cancelled = false
     leanMonaco.whenReady.then(() => {
       if (cancelled || leanMonaco.disposed) return
+      monaco.editor.setTheme(darkMode ? "Visual Studio Dark" : "Visual Studio Light")
       leanMonaco.updateVSCodeOptions({
         "workbench.colorTheme": darkMode ? "Visual Studio Dark" : "Visual Studio Light",
         // Give the editors the same background as the panels around them.
