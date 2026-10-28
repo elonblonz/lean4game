@@ -116,6 +116,13 @@ export const deleteCodeFromLineAtom = atom(null, (get, set, line: number) => {
   set(codeAtom, newCode)
 })
 
+/** Lean's error code for an RPC session that the server no longer knows (`RpcNeedsReconnect`),
+ * e.g. after the server restarted the file worker. The session has to be reconnected. */
+export const RPC_NEEDS_RECONNECT = -32900
+
+/** How long to wait for the proof state before reporting that the Lean server didn't respond. */
+const PROOF_STATE_TIMEOUT_MS = 90_000
+
 /** The analysed proof, received over RPC  */
 export const proofQueryAtom = atomWithQuery<ProofState>((get) => {
   const worldId = get(worldIdAtom)
@@ -124,9 +131,17 @@ export const proofQueryAtom = atomWithQuery<ProofState>((get) => {
   const rpcSess = get(rpcSessionAtom)
   return {
     queryKey: ['proof', worldId, levelId, rpcSess?.sessionId, code],
+    // Errors are thrown rather than swallowed, so that the level can reconnect an outdated
+    // session or tell the player, instead of showing a loading spinner forever.
+    retry: (failureCount, error: any) => error?.code !== RPC_NEEDS_RECONNECT && failureCount < 2,
     queryFn: async () => {
       if (!rpcSess) return undefined
-      const res = await rpcSess.client.sendRequest(
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Timed out waiting for the Lean server')),
+          PROOF_STATE_TIMEOUT_MS)
+      })
+      const request = rpcSess.client.sendRequest(
         '$/lean/rpc/call',
         {
           method: "Game.getProofState",
@@ -140,11 +155,15 @@ export const proofQueryAtom = atomWithQuery<ProofState>((get) => {
           position: {line: 0, character: 0},
           sessionId: rpcSess.sessionId
         }
-      ).catch((err) => {
+      )
+      try {
+        return await Promise.race([request, timeout])
+      } catch (err) {
         console.warn(err)
-        return null
-      })
-      return res
+        throw err
+      } finally {
+        clearTimeout(timer)
+      }
     },
     enabled: rpcSess?.sessionId != undefined && code != undefined && worldId != undefined && levelId != undefined
   }

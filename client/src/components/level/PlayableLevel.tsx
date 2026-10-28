@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 import { useGameTranslation } from "../../utils/translation"
 import { useEffect, useRef, useState } from "react"
 import { useAtom } from "jotai"
-import { clientAtom, codeStorageAtom, rpcSessionAtom, editorAtom, leanMonacoAtom, lockEditorModeAtom, modelAtom, typewriterModeAtom, uriAtom } from "../../store/editor-atoms"
+import { clientAtom, codeStorageAtom, rpcSessionAtom, editorAtom, leanMonacoAtom, lockEditorModeAtom, modelAtom, typewriterModeAtom, uriAtom, proofQueryAtom, RPC_NEEDS_RECONNECT } from "../../store/editor-atoms"
 import { gameIdAtom, levelIdAtom, worldIdAtom } from "../../store/location-atoms"
 import { mobileAtom } from "../../store/preferences-atoms"
 import { gameInfoAtom, levelInfoAtom } from "../../store/query-atoms"
@@ -130,6 +130,16 @@ export function PlayableLevel() {
     }, 500)
     return () => clearInterval(interval)
   }, [client, uri, rpcSess])
+
+  // If Lean no longer knows our RPC session (e.g. the server restarted the file worker),
+  // drop it so that the effect above connects a new one.
+  const [{ error: proofError }] = useAtom(proofQueryAtom)
+  useEffect(() => {
+    if ((proofError as any)?.code === RPC_NEEDS_RECONNECT) {
+      console.debug('rpc session outdated, reconnecting')
+      setRpcSess(undefined)
+    }
+  }, [proofError])
 
   // Select and highlight proof steps and corresponding hints
   // TODO: with the new design, there is no difference between the introduction and

@@ -3,6 +3,17 @@
   justify-content: center;
   width: 100%;
   margin-top: -1.5rem;
+  /* The rotating spinner's bounding box changes size; don't let it change the scroll height. */
+  overflow: hidden;
+}
+
+.proof-state-error {
+  padding: 1rem;
+  text-align: center;
+}
+
+.proof-state-error .btn {
+  margin: 0 0.5rem;
 }
 
 .typewriter-canvas {
@@ -21,6 +32,9 @@
   min-height: 0;
   position: relative;
   overflow-y: auto;
+  /* Always reserve the scrollbar's space. Otherwise a scrollbar appearing narrows the world
+     image, which changes the content height, which can make the scrollbar disappear again. */
+  scrollbar-gutter: stable;
 }
 
 .typewriter-input {
