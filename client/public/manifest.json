@@ -1,6 +1,6 @@
 {
-  "short_name": "Lean4game",
-  "name": "Learning games for Lean",
+  "short_name": "Set Theory Game",
+  "name": "Set Theory Game",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
+  "theme_color": "#1976d2",
   "background_color": "#ffffff"
 }

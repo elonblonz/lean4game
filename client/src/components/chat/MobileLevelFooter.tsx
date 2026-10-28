@@ -1,6 +1,5 @@
 import * as React from 'react'
 import { useEffect, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
 import { Markdown } from '../markdown'
 import { useGameTranslation } from '../../utils/translation'
@@ -13,10 +12,9 @@ import { NextLevelButton } from './ChatPanel'
 /**
  * On mobile there is no chat panel: the hints are shown inside the proof steps, and this
  * shows what the chat panel would show below them: the "Show more help!" button and,
- * once the level is solved, the completion message, the conclusion and the Next button.
+ * once the level is solved, the conclusion and the Next button.
  */
 export function MobileLevelFooter() {
-  const { t } = useTranslation()
   const { t: gT } = useGameTranslation()
   const [worldId] = useAtom(worldIdAtom)
   const [levelId] = useAtom(levelIdAtom)
@@ -35,10 +33,8 @@ export function MobileLevelFooter() {
   if (!proof) return null
 
   return <div className="mobile-level-footer">
+    {/* The proof itself already ends with the game's "level completed" message. */}
     {proof.completed && <>
-      <div className="message information recent">
-        {t("Level completed! 🎉")}
-      </div>
       {levelInfo?.conclusion?.trim() &&
         <div className="message information recent">
           <Markdown>{gT(levelInfo?.conclusion ?? "")}</Markdown>

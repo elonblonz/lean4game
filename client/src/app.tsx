@@ -20,6 +20,7 @@ import "./css/tab_bar.css"
 import "./css/typewriter.css"
 import "./css/welcome.css"
 import "./css/world_tree.css"
+import "./css/modern.css"
 
 import i18n from './i18n';
 import { Popup } from './components/popup/popup';
@@ -27,6 +28,7 @@ import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/editor-atoms';
 import { LeanMonaco } from 'lean4monaco';
 import * as monaco from 'monaco-editor';
 import { darkModeAtom, preferencesAtom } from './store/preferences-atoms';
+import { gameInfoAtom } from './store/query-atoms';
 
 /** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `app.css`. */
 const DARK_BACKGROUND = '#1e2127'
@@ -44,6 +46,12 @@ function App({ children }: { children?: React.ReactNode }) {
   useEffect(() => {
     i18n.changeLanguage(preferences.language)
   }, [preferences.language])
+
+  // Name the browser tab after the game being played.
+  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
+  useEffect(() => {
+    if (gameInfo?.title) document.title = gameInfo.title
+  }, [gameInfo?.title])
 
   // You need to start one `LeanMonaco` instance once in your application using a `useEffect`
   useEffect(() => {

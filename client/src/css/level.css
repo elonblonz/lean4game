@@ -231,8 +231,8 @@ td code  {
   min-height: 36px;
   border: 0;
   margin: 0;
-  background: white;
-  color: var(--clr-primary);
+  background: var(--clr-surface);
+  color: var(--clr-link);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -240,7 +240,7 @@ td code  {
 
 .mobile-page-switch button.active {
   background: var(--clr-primary);
-  color: white;
+  color: var(--clr-on-primary);
 }
 
 

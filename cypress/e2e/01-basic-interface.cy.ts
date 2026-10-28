@@ -35,11 +35,8 @@ describe('Basic Lean4game Interface', () => {
       it('landing page footer', () => {
         cy.visit('/#/')
         cy.get('footer').contains('a', 'Impressum').should('be.visible').click()
-        cy.contains('a', 'Contact Details').should('have.attr', 'target', '_blank')
-        .then($a => {
-          const href = $a.prop('href')
-          cy.request(href).its('status').should('eq', 200)
-        })
+        // The site operator's own text (`client/public/legal/impressum.md`).
+        cy.contains('h2', 'Impressum').should('be.visible')
       })
     })
     describe('Info', () => {
