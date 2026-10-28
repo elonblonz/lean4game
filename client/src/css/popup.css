@@ -39,6 +39,23 @@
   color: var(--vscode-breadcrumb-foreground);
 }
 
+/* Small screens: use (almost) the full screen, less padding, scrollbar only when needed. */
+@media (max-width: 600px) {
+  .modal {
+    box-sizing: border-box;
+    min-width: 0;
+    width: calc(100% - 1.5rem);
+    max-height: calc(100% - 1.5rem);
+    padding: 1.25em;
+    overflow: auto;
+  }
+
+  .modal table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
 .modal input[type="text"] {
   width: 100%;
 }
