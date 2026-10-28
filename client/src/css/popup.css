@@ -54,6 +54,21 @@
     display: block;
     overflow-x: auto;
   }
+
+  /* Preferences: the layout slider has a fixed width of 300px */
+  .modal .preferences-item.leave-left-gap {
+    margin-left: 1.5em;
+    margin-right: 1.5em;
+  }
+
+  .modal .preferences-item.leave-left-gap .MuiFormControlLabel-root {
+    display: flex;
+    margin: 0;
+  }
+
+  .modal .preferences-item.leave-left-gap .MuiBox-root {
+    max-width: 100%;
+  }
 }
 
 .modal input[type="text"] {

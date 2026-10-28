@@ -125,6 +125,8 @@ em {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* with `overflow: hidden` the baseline would move to the bottom edge */
+  vertical-align: top;
 }
 
 .app-bar .nav-btns {
