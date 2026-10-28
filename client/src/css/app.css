@@ -155,6 +155,9 @@ em {
 .app-bar.mobile .nav-btns .btn {
   min-width: 40px;
   min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .markdown li ul, .markdown li ol {

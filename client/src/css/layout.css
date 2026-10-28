@@ -77,6 +77,15 @@ html, body {
   margin: auto;
 }
 
+/* Mobile: keep the level icons large enough to tap and scroll the tree instead. */
+.world-tree.mobile {
+  overflow: auto;
+}
+
+.world-tree.mobile .world-selection {
+  max-width: none;
+}
+
 /* Exercise Panel */
 .exercise {
   gap: 8px;
