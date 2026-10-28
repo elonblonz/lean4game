@@ -104,6 +104,94 @@ html {
   --clr-landing-section-alt: rgb(248, 249, 250);
 }
 
+/* Dark palette. `data-theme` on <html> is set from the "Appearance" preference
+   (system / light / dark). Text on its background is at least WCAG AA (4.5:1). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --clr-primary: #1976d2;
+  --clr-primary-dark: #a5cdf8;
+  --clr-light-gray: #3a3e46;
+  --clr-dark-gray: #4a4f58;
+  --clr-darker-gray: #b4bac2;
+
+  --clr-on-primary: #fff;
+  --clr-link: #6fb1f5;
+  --clr-link-hover: #a5cdf8;
+  --clr-text-accent: #7fb0e6;
+
+  --clr-background: #1e2127;
+  --clr-surface: #252830;
+  --clr-surface-muted: #22252b;
+  --clr-surface-subtle: #2a2d35;
+  --clr-surface-sunken: #16181c;
+  --clr-surface-disabled: #3a3e46;
+  --clr-surface-strong: #3a3e46;
+
+  --clr-text: #e6e8ec;
+  --clr-text-secondary: #b4bac2;
+  --clr-text-muted: #a0a6ae;
+  --clr-text-subtle: #a0a6ae;
+  --clr-text-disabled: #80868f;
+  --clr-text-faint: #646a73;
+  --clr-code-text: #c9d6ec;
+  --clr-code-bg: #2f3440;
+
+  --clr-border: #4a4f58;
+  --clr-border-strong: #80868f;
+  --clr-border-light: #3a3e46;
+  --clr-divider: rgba(255, 255, 255, 0.12);
+  --clr-divider-subtle: rgba(255, 255, 255, 0.1);
+  --clr-card-border: #4a4f58;
+  --clr-infoview-border: #2e7d32;
+
+  --clr-shadow: rgba(0, 0, 0, 0.7);
+  --clr-shadow-soft: rgba(0, 0, 0, 0.4);
+  --clr-card-shadow: rgba(0, 0, 0, 0.5);
+  --clr-backdrop: rgba(0, 0, 0, 0.6);
+
+  --clr-info-bg: #1b3346;
+  --clr-info-text: #e3eef7;
+  --clr-warning-bg: #3d3115;
+  --clr-warning-text: #ffd27a;
+  --clr-error-bg: #4a1c1f;
+  --clr-error-text: #ffb3b3;
+  --clr-error-border: #e5534b;
+  --clr-danger-text: #ff8a8a;
+  --clr-form-error: #ff8a8a;
+  --clr-new: #4a3f14;
+  --clr-recent: #43234d;
+  --clr-recent-glow: #3d6a99;
+  --clr-processing: rgba(255, 165, 0, 1);
+  --clr-gutter-error: rgba(255, 80, 80, 1);
+
+  --clr-history-1: #e6e8ec;
+  --clr-history-2: #b4bac2;
+  --clr-history-3: #8a9099;
+  --clr-history-4: #646a73;
+  --clr-history-5: #4a4f58;
+
+  --clr-world-completed: #1f8a1f;
+  --clr-world-unlocked: #1976d2;
+  --clr-world-locked: #5c626b;
+  --clr-level-completed: #139e13;
+  --clr-level-locked: #4a4f58;
+  --clr-world-label-completed: #0e770e;
+  --clr-world-label-unlocked: #1667b8;
+  --clr-world-label-locked: #5c626b;
+  --clr-world-text: #fff;
+
+  --clr-hero-fallback: rgb(29,0,36);
+  --clr-hero-start: rgba(97,9,121,1);
+  --clr-hero-end: rgba(0,212,255,1);
+  --clr-hero-text: #fff;
+  --clr-hero-text-hover: rgb(218, 218, 218);
+  --clr-landing-nav: rgba(0, 133, 162, .7);
+  --clr-landing-footer: #00687f;
+  --clr-landing-section: #1e2127;
+  --clr-landing-section-alt: #22252b;
+}
+
 /* General styling */
 
 body {
