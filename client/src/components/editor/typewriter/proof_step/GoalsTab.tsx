@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 import { InteractiveGoalsWithHints } from "../../../../api/rpc_api"
 import { useAtom } from "jotai"
-import { mobileAtom } from "../../../../store/preferences-atoms"
+import { darkModeAtom, mobileAtom } from "../../../../store/preferences-atoms"
 import React from "react"
 import { Goal } from "./Goal"
 
@@ -9,6 +9,7 @@ import { Goal } from "./Goal"
 export function GoalsTabs({ proofStep, last, onClick, onGoalChange=(n)=>{}}: { proofStep: InteractiveGoalsWithHints, last : boolean, onClick? : any, onGoalChange?: (n?: number) => void }) {
   let { t } = useTranslation()
   const [mobile] = useAtom(mobileAtom)
+  const [darkMode] = useAtom(darkModeAtom)
   const [selectedGoal, setSelectedGoal] = React.useState<number>(0)
 
   if (proofStep.goals.length == 0) {
@@ -28,7 +29,7 @@ export function GoalsTabs({ proofStep, last, onClick, onGoalChange=(n)=>{}}: { p
         </div>
       ))}
     </div>
-    <div className="goal-tab vscode-light" style={{flexDirection: mobile ? "column" : "row"}}>
+    <div className={`goal-tab ${darkMode ? "vscode-dark" : "vscode-light"}`} style={{flexDirection: mobile ? "column" : "row"}}>
       <Goal goal={goal} />
     </div>
   </div>
