@@ -115,6 +115,48 @@ em {
   /* margin: 0 1em; */
 }
 
+/* Keep the app bar within the screen: long titles are cut off, the buttons stay. */
+.app-bar > div {
+  min-width: 0;
+}
+
+.app-bar-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-bar .nav-btns {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Mobile: a lower app bar, the title may use two lines, touch-sized buttons. */
+.app-bar.mobile {
+  padding: .5rem .75rem;
+  gap: .5rem;
+}
+
+.app-bar.mobile .app-bar-title {
+  font-size: 1.1rem;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.app-bar.mobile .nav-btns {
+  display: flex;
+  align-items: center;
+  height: auto;
+}
+
+.app-bar.mobile .nav-btns .btn {
+  min-width: 40px;
+  min-height: 40px;
+}
+
 .markdown li ul, .markdown li ol {
 	margin:0 1.5em;
 }

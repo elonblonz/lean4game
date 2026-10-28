@@ -80,7 +80,7 @@ export function MenuButton() {
  * button to go one level futher.
  * for the last level, this button turns into a button going back to the welcome page.
  */
-function NextButton({worldSize} : {worldSize: number }) {
+function NextButton({worldSize, iconOnly=false} : {worldSize: number, iconOnly?: boolean}) {
   const [, closeNav] = useAtom(closeNavAtom)
   const { t } = useTranslation()
   const [gameId, navigateToGame] = useAtom(gameIdAtom)
@@ -93,7 +93,7 @@ function NextButton({worldSize} : {worldSize: number }) {
         onClick={() => {navigateToLevel(levelId + 1); closeNav()}}
          title={t("next level")}
       >
-      <FontAwesomeIcon icon={faArrowRight} />&nbsp;{t("Start")}
+      <FontAwesomeIcon icon={faArrowRight} />{!iconOnly && <>&nbsp;{t("Start")}</>}
     </Button>
   )
   if (levelId < worldSize) return (
@@ -102,12 +102,12 @@ function NextButton({worldSize} : {worldSize: number }) {
         title={t("next level")}
         disabled={difficulty >= 2 && !(proof?.completed || levelId === 0)}
       >
-      <FontAwesomeIcon icon={faArrowRight} />&nbsp;{t("Next")}
+      <FontAwesomeIcon icon={faArrowRight} />{!iconOnly && <>&nbsp;{t("Next")}</>}
     </Button>
   )
   return (
     <Button onClick={() => {if (gameId) navigateToGame(gameId)}}  inverted={true} title={t("Home")} id="home-btn">
-      <FontAwesomeIcon icon={faHome} />&nbsp;{t("Home")}
+      <FontAwesomeIcon icon={faHome} />{!iconOnly && <>&nbsp;{t("Home")}</>}
     </Button>
   )
 }
@@ -115,7 +115,7 @@ function NextButton({worldSize} : {worldSize: number }) {
 /** button to go one level back.
  * only renders if the current level id is > 0.
  */
-function PreviousButton() {
+function PreviousButton({iconOnly=false} : {iconOnly?: boolean}) {
   const [, closeNav] = useAtom(closeNavAtom)
   const { t } = useTranslation()
   const [gameId] = useAtom(gameIdAtom)
@@ -127,7 +127,7 @@ function PreviousButton() {
         onClick={() => {navigateToLevel(levelId - 1); closeNav()}}
         title={t("previous level")}
       >
-      <FontAwesomeIcon icon={faArrowLeft} />&nbsp;{t("Previous")}
+      <FontAwesomeIcon icon={faArrowLeft} />{!iconOnly && <>&nbsp;{t("Previous")}</>}
     </Button>
   )
 }
@@ -295,20 +295,6 @@ function LandingPageButton() {
     </Button>
 }
 
-/** button in mobile level to toggle inventory.
- * only displays a button if `setPageNumber` is set.
- */
-function InventoryButton({pageNumber, setPageNumber} : {pageNumber: number, setPageNumber: (val: number) => void}) {
-  const { t } = useTranslation()
-  return (setPageNumber &&
-    <Button  className="btn btn-inverted toggle-width"
-      title={pageNumber ? t("close inventory") : t("show inventory")}
-      inverted={true} onClick={() => {setPageNumber(pageNumber ? 0 : 1)}}>
-      <FontAwesomeIcon icon={pageNumber ? faBookOpen : faBook} />
-    </Button>
-  )
-}
-
 /** the navigation bar on the welcome page */
 export function WelcomeAppBar({pageNumber, setPageNumber} : {
   pageNumber: number,
@@ -320,7 +306,7 @@ export function WelcomeAppBar({pageNumber, setPageNumber} : {
   const [mobile] = useAtom(mobileAtom)
   const [navOpen, setNavOpen] = useAtom(navOpenAtom)
 
-  return <div className="app-bar">
+  return <div className={`app-bar${mobile ? " mobile" : ""}`}>
     <div className='app-bar-left'>
       <LandingPageButton />
       <span className="app-bar-title"></span>
@@ -363,20 +349,19 @@ export function LevelAppBar({isLoading, levelTitle, pageNumber=1, setPageNumber=
 
   let worldTitle = worldId ? gameInfo?.worlds?.nodes[worldId]?.title : ""
 
-  return <div className="app-bar" style={isLoading ? {display: "none"} : undefined} >
+  return <div className={`app-bar${mobile ? " mobile" : ""}`} style={isLoading ? {display: "none"} : undefined} >
     {mobile ?
       <>
         {/* MOBILE VERSION */}
-        <div>
+        <div className="app-bar-main">
           <span className="app-bar-title">{levelTitle}</span>
         </div>
         <div className="nav-btns">
-          <InventoryButton pageNumber={pageNumber} setPageNumber={setPageNumber}/>
+          <PreviousButton iconOnly={true} />
+          <NextButton worldSize={gameInfo?.worldSize?.[worldId]} iconOnly={true} />
           <MenuButton />
         </div>
         <div className={'menu dropdown' + (navOpen ? '' : ' hidden')}>
-          <NextButton worldSize={gameInfo?.worldSize?.[worldId]} />
-          <PreviousButton />
           <HomeButton isDropdown={true} />
           <InputModeButton isDropdown={true}/>
           <GameInfoButton />

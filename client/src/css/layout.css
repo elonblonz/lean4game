@@ -54,7 +54,7 @@ html, body {
 }
 
 /* Mobile level: the one visible panel fills the space below the app bar. */
-.level-mobile {
+.level-mobile:not(.hidden) {
   display: flex;
   flex-direction: column;
 }
