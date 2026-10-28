@@ -15,7 +15,8 @@
   },
   "Funding": {
     "translation": "Funding",
-    "description": "This server is hosted at Heinrich Heine University Düsseldorf. The lean4game software was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1>, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>."
+    "description": "This server is hosted at Heinrich Heine University Düsseldorf. The lean4game software was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1>, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>.",
+    "engine": "The lean4game software was developed as part of the project <1>ADAM: Anticipating the Digital Age of Mathematics</1> at Heinrich Heine University Düsseldorf, funded by the programme <i>Freiraum 2022</i> of the <i>Stiftung Innovation in der Hochschullehre</i>. Ongoing maintenance and development are generously supported by <i>Renaissance Philanthropy</i> through the <i>AI for Math Fund</i>."
   },
   "Server capacity": {
     "translation": "Server capacity",
@@ -129,5 +130,15 @@
   "Typewriter Mode": "Typewriter Mode",
   "Proof": "Proof",
   "Inventory": "Inventory",
-  "The operator of this site has not provided this information yet.": "The operator of this site has not provided this information yet."
+  "The operator of this site has not provided this information yet.": "The operator of this site has not provided this information yet.",
+  "Further details": "Further details",
+  "Proven in:": "Proven in:",
+  "insert '{{name}}'": "insert '{{name}}'",
+  "This file is not a saved game progress (it is not valid JSON).": "This file is not a saved game progress (it is not valid JSON).",
+  "This file does not contain game progress.": "This file does not contain game progress.",
+  "This file does not contain progress for this game.": "This file does not contain progress for this game.",
+  "No game is open.": "No game is open.",
+  "The file could not be read.": "The file could not be read.",
+  "Close": "Close",
+  "Menu": "Menu"
 }

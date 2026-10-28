@@ -6,10 +6,10 @@ export interface ButtonProps
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ disabled, inverted, children, onClick, ...rest }, ref) => {
+  ({ disabled, inverted, children, onClick, className, ...rest }, ref) => {
     return <button
       ref={ref}
-      className={`btn ${disabled ? 'btn-disabled' : ''} ${inverted ? 'btn-inverted' : ''}`}
+      className={`btn ${disabled ? 'btn-disabled' : ''} ${inverted ? 'btn-inverted' : ''} ${className ?? ''}`}
       disabled={disabled}
       onClick={(ev) => {if (!disabled) onClick?.(ev)}}
       {...rest}>

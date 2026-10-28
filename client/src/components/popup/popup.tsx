@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { useAtom } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import { popupAtom, PopupType } from '../../store/popup-atoms'
 import { ImpressumPopup } from './impressum'
 import { InfoPopup } from './info'
@@ -42,18 +43,35 @@ function getPopupContent(popup: PopupType) {
 
 /** A popup displayed over the entire page. */
 export function Popup () {
+  // Without suspending: this is rendered directly in `App`, and suspending would remount
+  // `App`, which would start a second LeanMonaco instance.
+  const { t } = useTranslation(undefined, { useSuspense: false })
   const [popup, setPopup] = useAtom(popupAtom)
+  const modalRef = React.useRef<HTMLDivElement>(null)
 
   function closePopup() {
     setPopup(null)
   }
 
+  // Escape closes the popup; focus moves into it while it is open, and back afterwards.
+  React.useEffect(() => {
+    if (!popup) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    modalRef.current?.focus()
+    const onKeyDown = (ev: KeyboardEvent) => { if (ev.key === "Escape") closePopup() }
+    document.addEventListener("keydown", onKeyDown)
+    return () => {
+      document.removeEventListener("keydown", onKeyDown)
+      previousFocus?.focus?.()
+    }
+  }, [popup])
+
   if (!popup) {return null}
 
   return <div className="modal-wrapper">
   <div className="modal-backdrop" onClick={closePopup} />
-  <div className="modal">
-    <div className="codicon codicon-close modal-close" onClick={closePopup}></div>
+  <div className="modal" role="dialog" aria-modal="true" tabIndex={-1} ref={modalRef}>
+    <button className="codicon codicon-close modal-close" onClick={closePopup} aria-label={t("Close")} title={t("Close")}></button>
     {getPopupContent(popup)}
   </div>
 </div>

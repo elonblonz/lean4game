@@ -21,7 +21,7 @@ export const AUTO_SWITCH_THRESHOLD = 1024
 
 const defaultPreferences: Preferences = {
   layout: "auto",
-  isSavePreferences: false,
+  isSavePreferences: true,
   language: import.meta.env.VITE_CLIENT_DEFAULT_LANGUAGE || "en",
   isSuggestionsMobileMode: true,
   useFlags: false,

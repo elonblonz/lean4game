@@ -268,11 +268,11 @@ export const typewriterAtom = atom(
     const { isSuggestionsMobileMode } = get(preferencesAtom)
 
     if (!oneLineEditor) {
-      console.log("[TypewriterAtom] oneLineEditor is False")
+      console.debug("[TypewriterAtom] oneLineEditor is False")
       return
     }
 
-    console.log(`[TypewriterAtom] Set value in oneLineEditor to ${val}`)
+    console.debug(`[TypewriterAtom] Set value in oneLineEditor to ${val}`)
     oneLineEditor.setValue(val)
     oneLineEditor.setPosition({
       column: val.length + 1,
@@ -318,9 +318,9 @@ export const leanMonacoEditorUriAtom = atom(
 export const haseditorAtom = atom(
   (get) => {
     const editor = get(editorAtom)
-    console.log(`haseditorAtom: editor state is ${editor}`)
+    console.debug(`haseditorAtom: editor state is ${editor}`)
     const model = get(leanMonacoEditorModelAtom)
-    console.log(`haseditorAtom: model state is ${model}`)
+    console.debug(`haseditorAtom: model state is ${model}`)
     return Boolean(editor && model)
   })
 
@@ -407,12 +407,12 @@ export const syncTypewriterToEditorEffect = atomEffect(
     const { isSuggestionsMobileMode } = get(preferencesAtom)
 
     if (!oneLineEditor) {
-      console.log("oneLineEditor is False")
+      console.debug("oneLineEditor is False")
       return
     }
 
     if (oneLineEditor.getValue() !== typewriter) {
-      console.log(`Set value in oneLineEditor to ${typewriter}`)
+      console.debug(`Set value in oneLineEditor to ${typewriter}`)
       oneLineEditor.setValue(typewriter)
       oneLineEditor.setPosition({
         column: typewriter.length + 1,

@@ -15,8 +15,8 @@ import { GameProgress } from '../../store/progress-types'
 export function downloadProgress(gameId: string, gameProgress: GameProgress) {
   downloadFile({
     data: JSON.stringify(gameProgress, null, 2),
-    fileName: `lean4game-${gameId}-${new Date().toLocaleDateString()}.json`,
-    fileType: 'text/json',
+    fileName: `lean4game-${gameId?.replaceAll('/', '-')}-${new Date().toISOString().slice(0, 10)}.json`,
+    fileType: 'application/json',
   })
 }
 

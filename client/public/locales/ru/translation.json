@@ -15,7 +15,8 @@
   },
   "Funding": {
     "translation": "Финансирование",
-    "description": "Этот сервер размещён в Дюссельдорфском университете имени Генриха Гейне. Программное обеспечение lean4game было разработано в рамках проекта <1>ADAM: Anticipating the Digital Age of Mathematics</1> при финансовой поддержке программы <i>Freiraum 2022</i> фонда <i>Stiftung Innovation in der Hochschullehre</i>. Дальнейшая поддержка и разработка щедро финансируются организацией <i>Renaissance Philanthropy</i> в рамках фонда <i>AI for Math Fund</i>."
+    "description": "Этот сервер размещён в Дюссельдорфском университете имени Генриха Гейне. Программное обеспечение lean4game было разработано в рамках проекта <1>ADAM: Anticipating the Digital Age of Mathematics</1> при финансовой поддержке программы <i>Freiraum 2022</i> фонда <i>Stiftung Innovation in der Hochschullehre</i>. Дальнейшая поддержка и разработка щедро финансируются организацией <i>Renaissance Philanthropy</i> в рамках фонда <i>AI for Math Fund</i>.",
+    "engine": "Программное обеспечение lean4game было разработано в рамках проекта <1>ADAM: Anticipating the Digital Age of Mathematics</1> в Университете имени Генриха Гейне в Дюссельдорфе при финансировании программы <i>Freiraum 2022</i> фонда <i>Stiftung Innovation in der Hochschullehre</i>. Дальнейшее сопровождение и развитие щедро поддерживает <i>Renaissance Philanthropy</i> через <i>AI for Math Fund</i>."
   },
   "Server capacity": {
     "translation": "Мощность сервера",
@@ -157,5 +158,16 @@
   "open language menu": "открыть меню выбора языка",
   "close menu": "закрыть меню",
   "open menu": "открыть меню",
-  "Proof": "Доказательство"
+  "Proof": "Доказательство",
+  "Further details": "Подробнее",
+  "Proven in:": "Доказано в:",
+  "insert '{{name}}'": "вставить «{{name}}»",
+  "This file is not a saved game progress (it is not valid JSON).": "Этот файл не является сохранённым прогрессом игры (это не корректный JSON).",
+  "This file does not contain game progress.": "Этот файл не содержит прогресса игры.",
+  "This file does not contain progress for this game.": "Этот файл не содержит прогресса для этой игры.",
+  "No game is open.": "Игра не открыта.",
+  "The file could not be read.": "Не удалось прочитать файл.",
+  "The operator of this site has not provided this information yet.": "Владелец этого сайта ещё не предоставил эту информацию.",
+  "Close": "Закрыть",
+  "Menu": "Меню"
 }

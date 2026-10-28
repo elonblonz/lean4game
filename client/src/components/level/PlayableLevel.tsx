@@ -5,7 +5,7 @@ import { useAtom } from "jotai"
 import { clientAtom, codeStorageAtom, rpcSessionAtom, editorAtom, leanMonacoAtom, lockEditorModeAtom, modelAtom, typewriterModeAtom, uriAtom, proofQueryAtom, needsReconnect, levelUriAtom, modelVersionAtom, syncedVersionAtom, typewriterContentAtom, currentProofAtom } from "../../store/editor-atoms"
 import { deletedChatAtom, selectedStepAtom } from "../../store/chat-atoms"
 import { inventoryAtom, selectedDocTileAtom } from "../../store/inventory-atoms"
-import { completedAtom } from "../../store/progress-atoms"
+import { completedAtom, difficultyAtom } from "../../store/progress-atoms"
 import { gameIdAtom, levelIdAtom, worldIdAtom } from "../../store/location-atoms"
 import { mobileAtom } from "../../store/preferences-atoms"
 import { gameInfoAtom, levelInfoAtom } from "../../store/query-atoms"
@@ -115,6 +115,27 @@ export function PlayableLevel() {
     }
   }, [editor, setCode, levelUri])
 
+  // The saved code is the truth: if it changes from outside the editor (progress erased or
+  // uploaded), or the editor kept an older text from a previous visit, update the editor.
+  useEffect(() => {
+    const model = editor?.getModel()
+    if (!editor || !model || model.uri.toString() !== levelUri) return
+    const saved = code ?? ""
+    if (editor.getValue() !== saved) model.setValue(saved)
+  }, [editor, code, levelUri])
+
+  // Tell the game server the player's rules setting and unlocked items: Lean uses them to
+  // decide which tactics and theorems are allowed.
+  // (The client drops notifications until its connection runs, so they are also sent right
+  // before connecting the RPC session, below.)
+  const [difficulty] = useAtom(difficultyAtom)
+  const [inventory] = useAtom(inventoryAtom)
+  const optionsRef = useRef({ difficulty, inventory: inventory ?? [] })
+  optionsRef.current = { difficulty, inventory: inventory ?? [] }
+  useEffect(() => {
+    client?.sendNotification('$/lean4game/options', optionsRef.current)
+  }, [client, difficulty, JSON.stringify(inventory)])
+
   // Track which version of the text Lean has: the proof state is only requested for that.
   useEffect(() => {
     if (!client) return
@@ -169,6 +190,7 @@ export function PlayableLevel() {
       if (connecting.current || !client) return
       connecting.current = true
       console.debug('rpc session connecting...')
+      client.sendNotification('$/lean4game/options', optionsRef.current)
       client.sendRequest('$/lean/rpc/connect', {uri: levelUri} as RpcConnectParams).then(result => {
         const sessionId = result.sessionId
         console.debug(`rpc session id: ${sessionId}`)
@@ -213,7 +235,8 @@ export function PlayableLevel() {
       ...levelInfo.lemmas ?? [],
       ...levelInfo.definitions ?? []
     ].filter(tile => tile.new).map(tile => tile.name)
-    if (levelInfo.statementName != null) {
+    // Levels whose statement has no name report it as "[anonymous]".
+    if (levelInfo.statementName != null && levelInfo.statementName !== "[anonymous]") {
       newTiles.push(levelInfo.statementName)
     }
     addToInventory(newTiles)
@@ -272,13 +295,17 @@ export function PlayableLevel() {
   // Effect when command line mode gets enabled
   useEffect(() => {
     if (model && (typewriterMode)) {
+      // The typewriter shows one command per line: drop empty lines. Only edit if that
+      // changes something (an edit is a new version, which Lean then has to check again).
       let code = model.getLinesContent().filter(line => line.trim())
-      // REMOVED .editor call
-      editor?.executeEdits("typewriter", [{
-        range: model.getFullModelRange(),
-        text: code.length ? code.join('\n') + '\n' : '',
-        forceMoveMarkers: true
-      }]);
+      const text = code.length ? code.join('\n') + '\n' : ''
+      if (model.getValue() !== text) {
+        editor?.executeEdits("typewriter", [{
+          range: model.getFullModelRange(),
+          text,
+          forceMoveMarkers: true
+        }]);
+      }
 
       // let endPos = editor.getModel().getFullModelRange().getEndPosition()
       // if (editor.getModel().getLineContent(endPos.lineNumber).trim() !== "") {

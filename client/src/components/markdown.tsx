@@ -24,7 +24,7 @@ export function Markdown(props: any) {
     ...props,
     children,
     remarkPlugins: [...props.remarkPlugins ?? [], remarkMath, gfm],
-    rehypePlugins: [...props.remarkPlugins ?? [], rehypeKatex],
+    rehypePlugins: [...props.rehypePlugins ?? [], rehypeKatex],
   };
   return (
     <div className="markdown">

@@ -51,6 +51,7 @@ export function LevelIcon({ world, level, position }:
     level: number,
     position: cytoscape.Position,
   }) {
+  const { t } = useTranslation()
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   const [difficulty] = useAtom(difficultyAtom)
   const [levelUnlocked] = useAtom(levelCompletedAtomFamily(`${world}:${level-1}`))
@@ -99,6 +100,7 @@ export function LevelIcon({ world, level, position }:
 
   return (
     <a onClick={() => {if (!levelDisabled) navigateAcrossWorlds(world, targetLevel)}}
+        {...mapIconProps(`${t("Level")} ${level}`, levelDisabled, () => navigateAcrossWorlds(world, targetLevel))}
         className={`level${levelDisabled ? ' disabled' : ''}`}>
       <circle style={{fill: completed ? lightgreen : unlocked? blue : lightgrey}} cx={x} cy={y} r={r} />
       <foreignObject className="level-title-wrapper" x={x} y={y}
@@ -141,6 +143,7 @@ export function WorldIcon({world, title, position}:
 
   return <a
       onClick={() => {if (!worldDisabled) navigateAcrossWorlds(world, firstUncompleted)}}
+      {...mapIconProps(title ? gT(title) : world, worldDisabled, () => navigateAcrossWorlds(world, firstUncompleted))}
       className={`world${worldDisabled ? ' disabled' : ''}`}>
     <circle className="world-circle" cx={s*position.x} cy={s*position.y} r={R}
         style={{fill: completed ? green : unlocked ? blue : grey}}/>
@@ -161,7 +164,8 @@ export function WorldIcon({world, title, position}:
       <foreignObject x={s*position.x - 75} y={s*position.y + labelOffset}
           width='150px' height='2em' style={{overflow: 'visible'}}
           >
-        <div className='world-label' style={{backgroundColor: completed ? darkgreen : unlocked ? darkblue : darkgrey}}>
+        {/* `playable-world`: the map scrolls to the first such world (see `WorldTreePanel`). */}
+        <div className={`world-label${unlocked && !completed ? ' playable-world' : ''}`} style={{backgroundColor: completed ? darkgreen : unlocked ? darkblue : darkgrey}}>
           <p className='world-title' style={{fontSize: MINFONT + "px"}}>
             {title ? gT(title) : world}
           </p>
@@ -194,6 +198,22 @@ export const downloadFile = ({ data, fileName, fileType } :
   })
   a.dispatchEvent(clickEvt)
   a.remove()
+  // Free the file once the browser has taken it.
+  setTimeout(() => window.URL.revokeObjectURL(a.href), 10_000)
+}
+
+/** Props that make a map icon usable with the keyboard: focusable unless disabled, opened with
+ * Enter or Space, and named for screen readers. */
+function mapIconProps(label: string, disabled: boolean, open: () => void) {
+  return {
+    role: "button",
+    tabIndex: disabled ? -1 : 0,
+    "aria-label": label,
+    "aria-disabled": disabled,
+    onKeyDown: (ev: React.KeyboardEvent) => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); if (!disabled) open() }
+    },
+  }
 }
 
 /** The menu that is shown next to the world selection graph */

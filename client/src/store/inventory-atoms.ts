@@ -79,12 +79,6 @@ export const inventoryAtom = atom(
   }
 )
 
-/** The user's inventory from local storage.
- *
- * TODO: currently this needs to be set in a `useEffect`
-*/
-export const userInventoryAtom = atom([] as string[])
-
 /** Curently selected tab */
 export const inventoryTabAtom = atom(InventoryTab.tactic)
 
@@ -174,13 +168,15 @@ export const inventorySubtabAtom = atom(
 export const currentInventoryTilesAtom = atom(get => {
   const tab = get(inventoryTabAtom)
   const subtab = get(inventorySubtabAtom)
-  const userInventory = get(userInventoryAtom)
+  // Items the player has unlocked (by completing levels, or "Unlock this item!").
+  const unlocked = get(inventoryAtom) ?? []
   const showLocked = get(preferencesAtom).showLockedInventory
 
   return get(inventoryTilesAtoms[tab])
+    .map(tile => unlocked.includes(tile.name) ? {...tile, locked: false} : tile)
     .filter(it =>
         !it.hidden &&
         it.category == subtab &&
         (showLocked || !it.locked)
-    ).map(tile => userInventory.includes(tile.name) ? {...tile, locked: false} : tile)
+    )
 })

@@ -29,6 +29,8 @@ import { LeanMonaco } from 'lean4monaco';
 import * as monaco from 'monaco-editor';
 import { darkModeAtom, preferencesAtom } from './store/preferences-atoms';
 import { gameInfoAtom } from './store/query-atoms';
+import { hashSegmentsAtom } from './store/location-atoms';
+import { langNavOpenAtom, navOpenAtom } from './store/navigation-atoms';
 
 /** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `app.css`. */
 const DARK_BACKGROUND = '#1e2127'
@@ -47,6 +49,15 @@ function App({ children }: { children?: React.ReactNode }) {
     i18n.changeLanguage(preferences.language)
   }, [preferences.language])
 
+  // Close the menus after navigating (they are global atoms and would stay open).
+  const [hashSegments] = useAtom(hashSegmentsAtom)
+  const [, setNavOpen] = useAtom(navOpenAtom)
+  const [, setLangNavOpen] = useAtom(langNavOpenAtom)
+  useEffect(() => {
+    setNavOpen(false)
+    setLangNavOpen(false)
+  }, [hashSegments.join('/')])
+
   // Name the browser tab after the game being played.
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   useEffect(() => {
@@ -63,11 +74,9 @@ function App({ children }: { children?: React.ReactNode }) {
       console.debug('[lean4game]: leanMonaco started')
     })()
 
-    return () => {
-      // Dispose the instance this effect started (`leanMonaco` is the previous render's value).
-      _leanMonaco.dispose()
-      setLeanMonaco(null)
-    }
+    // No cleanup: disposing an instance while it is still starting (React's strict mode runs
+    // this effect twice) leaves Monaco's services half-initialized, and the next `start` then
+    // fails with "Services are already initialized". A new instance replaces the old one.
   }, [leanMonacoOptions, setLeanMonaco])
 
   // Switch the CSS colour tokens (see `app.css`) before the browser paints.

@@ -13,6 +13,7 @@ import { WelcomeAppBar } from './app_bar'
 import { Hint } from './hints'
 import i18next from 'i18next'
 import { useGameTranslation } from '../utils/translation'
+import { useTranslation } from 'react-i18next'
 import { InventoryPanel } from './inventory/inventory_panel'
 import { gameIdAtom } from '../store/location-atoms'
 import { useAtom } from 'jotai'
@@ -30,6 +31,7 @@ function IntroductionPanel({setPageNumber}: {setPageNumber: (val: number) => voi
 
 
   const { t : gT } = useGameTranslation()
+  const { t } = useTranslation()
 
 
   // TODO: I left the setup for splitting up the introduction in place, but if it's not needed
@@ -55,7 +57,7 @@ function IntroductionPanel({setPageNumber}: {setPageNumber: (val: number) => voi
             setPageNumber(1);
             setReadGameIntro(true)
           }}>
-          Start&nbsp;<FontAwesomeIcon icon={faArrowRight}/>
+          {t("Start")}&nbsp;<FontAwesomeIcon icon={faArrowRight}/>
         </Button>
       </div>
     }

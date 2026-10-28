@@ -1,6 +1,6 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useRef } from "react"
 import "../../css/inventory.css"
-import { InventoryTab, inventoryTabAtom, inventoryTilesAtoms, selectedDocTileAtom, theoremSubtabAtom } from "../../store/inventory-atoms"
+import { closeDocAtom, InventoryTab, inventoryTabAtom, inventoryTilesAtoms, selectedDocTileAtom, theoremSubtabAtom } from "../../store/inventory-atoms"
 import { useAtom } from "jotai"
 import { InventoryOverview, InventoryTile, LevelInfo } from "../../store/api"
 import { InventorySubTabBar, InventoryTabBar } from "./tab_bars"
@@ -16,6 +16,15 @@ export function InventoryPanel({levelInfo, visible = true} : {
   const [tab] = useAtom(inventoryTabAtom)
   const [, setSubtab] = useAtom(theoremSubtabAtom)
   const [doc] = useAtom(selectedDocTileAtom)
+  const [, closeDoc] = useAtom(closeDocAtom)
+
+  // Switching to another tab shows that tab's list: close the open doc (it is looked up
+  // under the current tab, so it would show up empty).
+  const previousTab = useRef(tab)
+  useEffect(() => {
+    if (previousTab.current !== tab) closeDoc()
+    previousTab.current = tab
+  }, [tab])
   const [, setTheoremInventory] = useAtom(inventoryTilesAtoms[InventoryTab.theorem])
   const [, setTacticInventory] = useAtom(inventoryTilesAtoms[InventoryTab.tactic])
   const [, setDefinitionInventory] = useAtom(inventoryTilesAtoms[InventoryTab.definition])

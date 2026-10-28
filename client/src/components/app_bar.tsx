@@ -70,8 +70,10 @@ function MobileNavButtons({pageNumber, setPageNumber}:
 
 /** button to toggle dropdown menu. */
 export function MenuButton() {
+  const { t } = useTranslation()
   const [navOpen, setNavOpen] = useAtom(navOpenAtom)
-  return <Button  className="btn toggle-width" id="menu-btn" onClick={(ev) => {setNavOpen(!navOpen)}}>
+  return <Button  className="btn toggle-width" id="menu-btn" onClick={(ev) => {setNavOpen(!navOpen)}}
+      title={t("Menu")} aria-label={t("Menu")} aria-expanded={navOpen}>
     {navOpen ? <FontAwesomeIcon icon={faXmark} /> : <FontAwesomeIcon icon={faBars} />}
   </Button>
 }
@@ -107,11 +109,8 @@ function NextButton({worldSize, iconOnly=false} : {worldSize: number, iconOnly?:
       <FontAwesomeIcon icon={faArrowRight} />{!iconOnly && <>&nbsp;{t("Next")}</>}
     </Button>
   )
-  return (
-    <Button onClick={() => {if (gameId) navigateToGame(gameId)}}  inverted={true} title={t("Home")} id="home-btn">
-      <FontAwesomeIcon icon={faHome} />{!iconOnly && <>&nbsp;{t("Home")}</>}
-    </Button>
-  )
+  // The last level: the app bar already has a Home button.
+  return null
 }
 
 /** button to go one level back.
@@ -310,7 +309,7 @@ export function WelcomeAppBar({pageNumber, setPageNumber} : {
 
   return <div className={`app-bar${mobile ? " mobile" : ""}`}>
     <div className='app-bar-left'>
-      <LandingPageButton />
+      {import.meta.env.VITE_LEAN4GAME_SINGLE !== "true" && <LandingPageButton />}
       <span className="app-bar-title"></span>
     </div>
     <div>

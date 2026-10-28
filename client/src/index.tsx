@@ -25,10 +25,11 @@ function Router() {
   // `/g/local/game` or customized VITE_LEAN4GAME_SINGLE_NAME. This is used for the devcontainer setup
   let single_game = (import.meta.env.VITE_LEAN4GAME_SINGLE === "true")
   let single_game_name = (import.meta.env.VITE_LEAN4GAME_SINGLE_NAME === undefined) ? "game" : import.meta.env.VITE_LEAN4GAME_SINGLE_NAME
-  if (single_game && hashSegments.length == 0 && segments.length == 0) {
-    redirect(`#/g/local/${single_game_name}`)
-    return <div/>
-  }
+  const redirectToGame = single_game && hashSegments.length == 0 && segments.length == 0
+  React.useEffect(() => {
+    if (redirectToGame) redirect(`#/g/local/${single_game_name}`)
+  }, [redirectToGame])
+  if (redirectToGame) return <div/>
 
   let child: React.ReactNode
   if (gameId && worldId && levelId != null) {

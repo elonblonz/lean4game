@@ -8,7 +8,7 @@ import { popupAtom } from '../../store/popup-atoms'
 import { useAtom } from 'jotai'
 import { gameIdAtom } from '../../store/location-atoms'
 import { progressAtom } from '../../store/progress-atoms'
-import { GameProgress } from '../../store/progress-types'
+import { validateGameProgress } from '../../store/progress-validate'
 import { Button } from '../button'
 
 /** Pop-up that is displaying the Game Info.
@@ -20,6 +20,7 @@ export function UploadPopup () {
   let { t } = useTranslation()
 
   const [file, setFile] = React.useState<File>();
+  const [error, setError] = React.useState<string | null>(null)
   const [gameId] = useAtom(gameIdAtom)
   const [gameProgress, setProgress] = useAtom(progressAtom)
 
@@ -28,6 +29,7 @@ export function UploadPopup () {
   const handleFileChange = (e: any) => {
     if (e.target.files) {
       setFile(e.target.files[0])
+      setError(null)
     }
   }
 
@@ -37,12 +39,22 @@ export function UploadPopup () {
     const fileReader = new FileReader()
     fileReader.readAsText(file, "UTF-8")
     fileReader.onload = (e: any) => {
-      const data = JSON.parse(e.target.result.toString()) as GameProgress
-      console.debug("Json Data", data)
-      // FIXME: validate input!!
-      setProgress(data)
+      let data: any
+      try {
+        data = JSON.parse(e.target.result.toString())
+      } catch {
+        setError(t("This file is not a saved game progress (it is not valid JSON)."))
+        return
+      }
+      const progress = gameId ? validateGameProgress(data, gameId) : "No game is open."
+      if (typeof progress === 'string') {
+        setError(t(progress))
+        return
+      }
+      setProgress(progress)
+      setPopup(null) // close the popup
     }
-    setPopup(null) // close the popup
+    fileReader.onerror = () => setError(t("The file could not be read."))
   }
 
   /** Download the current progress (i.e. what's saved in the browser store) */
@@ -50,8 +62,9 @@ export function UploadPopup () {
     e.preventDefault()
     downloadFile({
       data: JSON.stringify(gameProgress, null, 2),
-      fileName: `lean4game-${gameId}-${new Date().toLocaleDateString()}.json`,
-      fileType: 'text/json',
+      // e.g. `lean4game-g-local-game-2026-10-29.json`
+      fileName: `lean4game-${gameId?.replaceAll('/', '-')}-${new Date().toISOString().slice(0, 10)}.json`,
+      fileType: 'application/json',
     })
   }
 
@@ -70,6 +83,7 @@ export function UploadPopup () {
     </p>
 
     {/* TODO: apperently clicking this redirects the user back to the landing page... */}
+    {error && <p className="form-error" role="alert">{error}</p>}
     <Button onClick={uploadProgress} disabled={!file}>{t("Load selected file")}</Button>
   </>
 }

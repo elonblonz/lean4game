@@ -60,13 +60,13 @@ export function TypewriterCommandLine() {
   useEffect(() => {
     // Guard: only create once
     if (oneLineEditorRef.current) {
-      console.log("Editor already exists, skipping initialization")
+      console.debug("Editor already exists, skipping initialization")
       return
     }
 
     // Guard: wait for DOM element
     if (!inputRef.current) {
-      console.log("inputRef.current is not ready yet")
+      console.debug("inputRef.current is not ready yet")
       return
     }
 
@@ -105,7 +105,7 @@ export function TypewriterCommandLine() {
       contextmenu: false
     }
 
-    console.log("Creating Monaco editor instance...")
+    console.debug("Creating Monaco editor instance...")
     const myEditor = monaco.editor.create(inputRef.current, editorConfig)
 
     const layoutInput = () => {
@@ -140,10 +140,12 @@ export function TypewriterCommandLine() {
 
     oneLineEditorRef.current = myEditor
     setOneLineEditor(myEditor)
-    console.log("Editor initialized successfully")
+    // Ready to type. Not on touch screens: there it would open the on-screen keyboard.
+    if (!window.matchMedia('(pointer: coarse)').matches) myEditor.focus()
+    console.debug("Editor initialized successfully")
 
     return () => {
-      console.log("Cleaning up editor...")
+      console.debug("Cleaning up editor...")
       changeDisposable?.dispose()
       myEditor.dispose()
       oneLineEditorRef.current = null

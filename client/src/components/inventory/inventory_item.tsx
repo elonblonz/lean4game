@@ -55,7 +55,7 @@ return <div className={`item ${className}${enableAll ? ' enabled' : ''}${recent 
     {insertable &&
     <button
         className="insert-button"
-        title={`insert '${tile.displayName}'`}
+        title={t("insert '{{name}}'", { name: tile.displayName })}
         onClick={insertItemName}
     >
       {inserted ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faReply} />}

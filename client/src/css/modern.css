@@ -143,3 +143,21 @@
 :root[data-theme="dark"] .world-image {
   filter: invert(.9) hue-rotate(180deg);
 }
+
+/* Error messages in forms, e.g. when an uploaded file is not saved progress. */
+.form-error {
+  color: var(--clr-form-error);
+  margin: .5em 0;
+}
+
+/* The popup's close control is a button: drop the browser's button look. */
+button.modal-close {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.modal:focus {
+  outline: none;
+}
