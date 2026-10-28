@@ -16,7 +16,7 @@ svg .world-title-wrapper div, svg .level-title-wrapper div {
 }
 
 svg .world-title, svg .level-title {
-  color: white;
+  color: var(--clr-world-text);
   margin: 0;
   padding: 0;
   text-align: center;
@@ -50,9 +50,9 @@ svg .disabled {
   /* margin: 1em; */
   /* border: 1px solid var(--clr-primary); */
   border: 1px solid var(--clr-primary);
-  background-color: #fff;
+  background-color: var(--clr-surface);
   border-radius: .5em;
-  filter: drop-shadow(4px 4px 5px rgba(0,0,0,0.5));
+  filter: drop-shadow(4px 4px 5px var(--clr-shadow));
 }
 
 .world-selection-menu.desktop {
@@ -113,6 +113,6 @@ svg .disabled {
   position: absolute;
   right: .5em;
   top: .5em;
-  color: var(--clr-primary);
+  color: var(--clr-link);
   cursor: pointer;
 }

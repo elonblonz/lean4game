@@ -7,7 +7,7 @@
   top: 0;
   left: 0;
   z-index: 10;
-  background-color: white;
+  background-color: var(--clr-surface);
   padding: 1em;
 }
 
@@ -56,9 +56,9 @@
 
 
 .inventory .item {
-  background: #fff;
+  background: var(--clr-surface);
   /* border: solid 1px #777; */
-  border-bottom: solid 1px var(--clr-dark-gray);
+  border-bottom: solid 1px var(--clr-border);
   padding-left: 1.5rem;
   padding-right: 2rem;
   padding-top: .125rem;
@@ -68,26 +68,26 @@
 
 .inventory .item.locked:not(.enabled) {
   /* border: solid 1px #ccc; */
-  color: #ccc;
+  color: var(--clr-text-faint);
 }
 
 .inventory .item.disabled {
-  color: #d92c2c;
+  color: var(--clr-danger-text);
 }
 
 .inventory .item.new {
-  background-color: rgb(255, 242, 190);
+  background-color: var(--clr-new);
 }
 
 .inventory .item.recent {
-  background-color: rgb(242, 190, 255);
+  background-color: var(--clr-recent);
 }
 .inventory .item, .inventory .item.enabled {
   cursor: pointer;
 }
 
 .inventory .item .insert-button {
-  color: #ccc;
+  color: var(--clr-text-faint);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,5 +99,5 @@
 }
 
 .inventory .item .insert-button {
-  color: #ccc;
+  color: var(--clr-text-faint);
 }

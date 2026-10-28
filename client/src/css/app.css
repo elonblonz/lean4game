@@ -13,17 +13,110 @@ html {
   --ff-primary: Roboto;
 }
 
+/* Colour tokens. Every colour in the CSS (and the world map) goes through one of these.
+   The values here are the light theme; the dark palette below overrides them. */
+:root {
+  color-scheme: light;
+
+  /* brand */
+  --clr-on-primary: #fff;
+  --clr-link: #1976d2;
+  --clr-link-hover: #104a83;
+  --clr-text-accent: #5191d1;
+
+  /* surfaces, from back to front */
+  --clr-background: #fff;
+  --clr-surface: #fff;
+  --clr-surface-muted: #fafafa;
+  --clr-surface-subtle: #f0f0f0;
+  --clr-surface-sunken: #eee;
+  --clr-surface-disabled: #ddd;
+  --clr-surface-strong: #bbb;
+
+  /* text */
+  --clr-text: #000;
+  --clr-text-secondary: #555;
+  --clr-text-muted: #777;
+  --clr-text-subtle: #888;
+  --clr-text-disabled: #aaa;
+  --clr-text-faint: #ccc;
+  --clr-code-text: rgba(0, 32, 90, 0.87);
+  --clr-code-bg: rgba(223, 227, 234);
+
+  /* lines */
+  --clr-border: #aaa;
+  --clr-border-strong: #999;
+  --clr-border-light: rgb(200, 200, 200);
+  --clr-divider: rgba(0, 0, 0, 0.12);
+  --clr-divider-subtle: rgba(0, 0, 0, 0.1);
+  --clr-card-border: rgb(140, 140, 140);
+  --clr-infoview-border: green;
+
+  /* elevation */
+  --clr-shadow: rgba(0, 0, 0, 0.5);
+  --clr-shadow-soft: rgba(0, 0, 0, 0.1);
+  --clr-card-shadow: rgb(140, 140, 140);
+  --clr-backdrop: rgba(0, 0, 0, 0.25);
+
+  /* status */
+  --clr-info-bg: #DDF6FF;
+  --clr-info-text: #000;
+  --clr-warning-bg: #FEEFB3;
+  --clr-warning-text: #9F6000;
+  --clr-error-bg: #FFBABA;
+  --clr-error-text: #D8000C;
+  --clr-error-border: #D8000C;
+  --clr-danger-text: #d92c2c;
+  --clr-form-error: #a00;
+  --clr-new: rgb(255, 242, 190);
+  --clr-recent: rgb(242, 190, 255);
+  --clr-recent-glow: #8cbbe9;
+  --clr-processing: rgba(255, 165, 0, 1);
+  --clr-gutter-error: rgba(255, 0, 0, 1);
+
+  /* proof history, fading out from the newest (1) to the oldest (5) line */
+  --clr-history-1: #000;
+  --clr-history-2: #333;
+  --clr-history-3: #666;
+  --clr-history-4: #999;
+  --clr-history-5: #ccc;
+
+  /* world map */
+  --clr-world-completed: green;
+  --clr-world-unlocked: #1976d2;
+  --clr-world-locked: #999;
+  --clr-level-completed: #139e13;
+  --clr-level-locked: #bbb;
+  --clr-world-label-completed: #0e770e;
+  --clr-world-label-unlocked: #1667b8;
+  --clr-world-label-locked: #868686;
+  --clr-world-text: #fff;
+
+  /* landing page */
+  --clr-hero-fallback: rgb(29,0,36);
+  --clr-hero-start: rgba(97,9,121,1);
+  --clr-hero-end: rgba(0,212,255,1);
+  --clr-hero-text: rgb(255, 255, 255);
+  --clr-hero-text-hover: rgb(218, 218, 218);
+  --clr-landing-nav: rgba(0, 133, 162, .7);
+  --clr-landing-footer: rgba(0, 133, 162, 1);
+  --clr-landing-section: rgb(255, 255, 255);
+  --clr-landing-section-alt: rgb(248, 249, 250);
+}
+
 /* General styling */
 
 body {
+  background: var(--clr-background);
+  color: var(--clr-text);
   font-family: var(--ff-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .markdown code {
-  color: rgba(0, 32, 90, 0.87);
-  background-color: rgba(223, 227, 234);
+  color: var(--clr-code-text);
+  background-color: var(--clr-code-bg);
   font-size: 85%;
   border-radius: .3em;
   padding-left: .3em;
@@ -40,8 +133,8 @@ body {
   padding-left: .3em;
   overflow: auto;
   line-height: 1.45;
-  color: rgba(0, 32, 90, 0.87);
-  background-color: rgba(223, 227, 234);
+  color: var(--clr-code-text);
+  background-color: var(--clr-code-bg);
   border-radius: .3em;
 }
 
@@ -56,7 +149,7 @@ body {
   line-height: inherit;
   text-decoration: none;
   background: var(--clr-primary);
-  color: white;
+  color: var(--clr-on-primary);
   display: inline-block;
   border-radius: 0.2em;
   padding: 0.2rem .6em;
@@ -67,22 +160,22 @@ body {
 }
 
 .btn-inverted {
-  color: var(--clr-primary);
-  background: white;
+  color: var(--clr-link);
+  background: var(--clr-surface);
 }
 
 .btn-inverted:hover {
-  color: var(--clr-primary-dark);
+  color: var(--clr-link-hover);
 }
 
 .btn-disabled, .btn[disabled] {
-  color: var(--clr-dark-gray);
-  background: var(--clr-light-gray);
+  color: var(--clr-text-disabled);
+  background: var(--clr-surface-disabled);
 }
 
 .btn-inverted.btn-disabled, .btn-inverted.btn[disabled] {
-  color: var(--clr-dark-gray);
-  background: white;
+  color: var(--clr-text-disabled);
+  background: var(--clr-surface);
 }
 
 em {
@@ -96,7 +189,7 @@ em {
   justify-content: space-between;
   align-items: center;
   padding: 1.1em;
-  filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 0 5px var(--clr-shadow));
   z-index: 20;
 }
 
@@ -107,7 +200,7 @@ em {
 }
 
 .app-bar-title, .app-bar-subtitle {
-  color: white;
+  color: var(--clr-on-primary);
   font-weight: 500;
   font-size: 1.3rem;
   display: inline-block;
