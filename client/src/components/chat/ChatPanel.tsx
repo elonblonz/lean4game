@@ -14,6 +14,20 @@ import { faArrowRight, faHome } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Button } from '../button'
 
+/** "Next" button below the hints of a solved level, "Home" on the last level of a world. */
+export const NextLevelButton = React.forwardRef<HTMLButtonElement, {lastLevel: boolean}>(({lastLevel}, ref) => {
+  const { t } = useTranslation()
+  const [gameId, navigateToGame] = useAtom(gameIdAtom)
+  const [levelId, navigateToLevel] = useAtom(levelIdAtom)
+  return lastLevel ?
+    <Button ref={ref} onClick={() => {if (gameId) navigateToGame(gameId)}} >
+      <FontAwesomeIcon icon={faHome} />&nbsp;{t("Home")}
+    </Button> :
+    <Button ref={ref} onClick={() => {if(levelId !== undefined) navigateToLevel(levelId + 1)}}  >
+      {t("Next")}&nbsp;<FontAwesomeIcon icon={faArrowRight} />
+    </Button>
+})
+
 /** Appears on the left of playable levels */
 export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visible: boolean}) {
   let { t } = useTranslation()
@@ -66,7 +80,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
 
   let introText: Array<string> = gT(levelInfo?.introduction ?? "").split(/\n(\s*\n)+/)
 
-  const focusRef = useRef<HTMLButtonElement>()
+  const focusRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
    if (proof?.completed) {
      focusRef.current?.focus()
@@ -114,14 +128,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
       }
     </div>
     <div className="button-row">
-      {proof?.completed && (lastLevel ?
-        <Button ref={focusRef} onClick={() => {if (gameId) navigateToGame(gameId)}} >
-          <FontAwesomeIcon icon={faHome} />&nbsp;{t("Home")}
-        </Button> :
-        <Button ref={focusRef} onClick={() => {if(levelId !== undefined) navigateToLevel(levelId + 1)}}  >
-          {t("Next")}&nbsp;<FontAwesomeIcon icon={faArrowRight} />
-        </Button>)
-        }
+      {proof?.completed && <NextLevelButton ref={focusRef} lastLevel={lastLevel} />}
       <MoreHelpButton selected={null} />
     </div>
   </div>

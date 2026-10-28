@@ -11,6 +11,8 @@ import { TypewriterCommandLine } from "./TypewriterCommandline";
 import { LoadingIcon } from "../../utils";
 import { CircularProgress } from "@mui/material";
 import { Button } from "../../button";
+import { mobileAtom } from "../../../store/preferences-atoms";
+import { MobileLevelFooter } from "../../chat/MobileLevelFooter";
 
 /** Shown instead of the proof when the Lean server can't be reached. */
 function ProofStateError({ retry }: { retry: () => void }) {
@@ -30,6 +32,7 @@ export function Typewriter() {
   const [gameId] = useAtom(gameIdAtom)
   const [worldId] = useAtom(worldIdAtom)
   const [proof] = useAtom(proofAtom)
+  const [mobile] = useAtom(mobileAtom)
   const [{ error, isFetching, refetch }] = useAtom(proofQueryAtom)
   // An outdated session is reconnected automatically (see `PlayableLevel`), so keep waiting.
   const failed = error && !isFetching && (error as any)?.code !== RPC_NEEDS_RECONNECT
@@ -52,6 +55,7 @@ export function Typewriter() {
         {proof ? proof.steps.map((step, i) => <ProofStep key={i} step={step} idx={i} />)
       : failed ? <ProofStateError retry={refetch} />
       : <div className="centered-spinner"><CircularProgress /></div>}
+        {mobile && proof && <MobileLevelFooter />}
       </div>
     </div>
     <TypewriterCommandLine />
