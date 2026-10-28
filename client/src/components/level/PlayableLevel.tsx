@@ -259,7 +259,7 @@ export function PlayableLevel() {
       pageNumber={pageNumber} setPageNumber={setPageNumber}
       isLoading={levelInfoIsLoading}
       levelTitle={(mobile ? "" : t("Level")) + ` ${levelId} / ${worldId ? gameInfo?.worldSize?.[worldId] ?? "" : ""}` +
-        (levelInfo?.title && ` : ${gT(levelInfo?.title ?? "")}`)}
+        (levelInfo?.title ? ` : ${gT(levelInfo.title)}` : "")}
       />
     {mobile?
       // TODO: This is copied from the `Split` component below...
