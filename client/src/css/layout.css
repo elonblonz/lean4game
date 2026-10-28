@@ -43,6 +43,21 @@ html, body {
   overflow-y: hidden;
 }
 
+/* `.hidden` alone loses against the `display: flex` above. */
+.inventory-panel.hidden, .exercise-panel.hidden, .chat-panel.hidden {
+  display: none;
+}
+
+/* Mobile level: the one visible panel fills the space below the app bar. */
+.level-mobile {
+  display: flex;
+  flex-direction: column;
+}
+
+.level-mobile > .exercise-panel, .level-mobile > .inventory-panel {
+  flex: 1;
+}
+
 /* World Tree Panel */
 
 .world-tree {

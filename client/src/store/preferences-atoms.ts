@@ -15,7 +15,8 @@ export function getWindowDimensions() {
   return {width, height}
 }
 
-export const AUTO_SWITCH_THRESHOLD = 800
+/** In "auto" layout, windows narrower than this (in px) get the single-panel mobile layout. */
+export const AUTO_SWITCH_THRESHOLD = 1024
 
 const defaultPreferences: Preferences = {
   layout: "auto",
@@ -51,7 +52,7 @@ export const preferencesAtom = atomWithStorage<Preferences>(
 
 const widthBelowThresholdAtom = atom(false)
 widthBelowThresholdAtom.onMount = set => {
-  const mq = window.matchMedia(`(max-width: ${AUTO_SWITCH_THRESHOLD}px)`)
+  const mq = window.matchMedia(`(max-width: ${AUTO_SWITCH_THRESHOLD - 1}px)`)
   const update = () => set(mq.matches)
 
   update()
