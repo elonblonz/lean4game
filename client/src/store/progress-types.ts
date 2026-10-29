@@ -9,6 +9,9 @@ export interface LevelProgress {
   selections: Selection[],
   completed: boolean,
   help: number[], // A set of rows where hidden hints have been displayed
+  /** How many of a row's hidden hints have been revealed, one by one ("hint ladder"). Rows in
+   * `help` that are missing here (progress saved by older versions) show all their hidden hints. */
+  helpCount?: {[row: number]: number},
 }
 
 export interface WorldProgress {

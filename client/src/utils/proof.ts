@@ -48,3 +48,15 @@ export function stepHints(proof: ProofState, i: number): GameHint[] {
 export function hasHiddenHints(step?: InteractiveGoalsWithHints): boolean {
   return step !== undefined && (step.goals[0]?.hints.some((hint) => hint.hidden) ?? false)
 }
+
+/** How many hidden hints a proof step has. */
+export function hiddenHintCount(step?: InteractiveGoalsWithHints): number {
+  return step?.goals[0]?.hints.filter(hint => hint.hidden).length ?? 0
+}
+
+/** The hints to show: all open ones, and the first `revealed` hidden ones (the "hint ladder":
+ * hidden hints are revealed one at a time, in the order the game defines them). */
+export function visibleHints(hints: GameHint[], revealed: number): GameHint[] {
+  let k = 0
+  return hints.filter(hint => !hint.hidden || k++ < revealed)
+}

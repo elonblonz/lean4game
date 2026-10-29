@@ -47,7 +47,7 @@ export function ProofStep({step, idx}: {step:InteractiveGoalsWithHints, idx: num
       }
       {mobile &&
         <Hints key={`hints-${idx}`}
-          hints={filteredHints} showHidden={help.has(idx)} step={idx}
+          hints={filteredHints} revealed={help.get(idx) ?? 0} step={idx}
           selected={selectedStep} toggleSelection={toggleSelectStep(idx)}/>
       }
       <GoalsTabs

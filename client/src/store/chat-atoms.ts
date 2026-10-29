@@ -16,17 +16,33 @@ export const readGameIntroAtom = atom(
   }
 )
 
+/**
+ * "Show more help": how many of each proof step's hidden hints the player has revealed. They
+ * are revealed one at a time, in the order the game defines them (e.g. the idea, then the next
+ * step, then the specific move). A step missing from the map has none revealed; `Infinity`
+ * means all of them (progress saved before hints were revealed one by one).
+ *
+ * Saved in the level's progress: `help` lists the steps with revealed hints (as before),
+ * `helpCount` how many.
+ */
 export const helpAtom = atom(
   get => {
     const levelProgress = get(levelProgressAtom)
-    return new Set(levelProgress?.help ?? [])
+    const counts = levelProgress?.helpCount ?? {}
+    return new Map<number, number>((levelProgress?.help ?? []).map(step =>
+      [step, counts[step] ?? Infinity]))
   },
-  (get, set, val: Set<number>) => {
+  (get, set, val: Map<number, number>) => {
     const levelProgress = get(levelProgressAtom)
     if (levelProgress == null) return
-    set(levelProgressAtom, { ...levelProgress, help: [ ...val ] })
+    const shown = [...val].filter(([, n]) => n > 0)
+    set(levelProgressAtom, { ...levelProgress,
+      help: shown.map(([step]) => step),
+      helpCount: Object.fromEntries(shown.filter(([, n]) => Number.isFinite(n))),
+    })
   }
 )
+
 
 /**
  * When deleting the proof, we want to keep to old messages around until

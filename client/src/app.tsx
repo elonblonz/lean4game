@@ -25,6 +25,7 @@ import "./css/welcome.css"
 import "./css/world_tree.css"
 import "./css/markdown.css"
 import "./css/inventory.css"
+import "./css/learning.css"
 
 import i18n from './i18n';
 import { Popup } from './components/popup/popup';

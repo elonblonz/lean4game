@@ -10,7 +10,7 @@ import { levelInfoAtom } from "./query-atoms";
 import { modelAtom, proofQueryAtom } from './lean-atoms';
 import { clearTypewriterAtom } from './typewriter-atoms';
 import { deletedChatAtom, helpAtom, selectedStepAtom } from './chat-atoms';
-import { lastStepHasErrors, lastValidStep, stepHints } from '../utils/proof';
+import { lastStepHasErrors, lastValidStep, stepHints, visibleHints } from '../utils/proof';
 
 /** The code of the current level as stored in local storage.
  *
@@ -112,13 +112,13 @@ export const deleteProofFromStepAtom = atom(null, (get, set, step: number) => {
   const proof = get(proofAtom)
   if (proof) {
     const newDeletedChat = proof.steps.slice(step).flatMap((s, j) =>
-      stepHints(proof, step + j).filter(hint => (!hint.hidden || help.has(step + j)))
+      visibleHints(stepHints(proof, step + j), help.get(step + j) ?? 0)
     )
     set(deletedChatAtom, newDeletedChat)
   }
 
   // Forget which hidden hints were shown for the deleted steps.
-  set(helpAtom, new Set(Array.from(help).filter(i => i < step)))
+  set(helpAtom, new Map(Array.from(help).filter(([i]) => i < step)))
 
   set(codeAtom, code.split("\n").slice(0, Math.max(0, step - 1)).join("\n"))
 })

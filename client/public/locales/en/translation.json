@@ -149,5 +149,7 @@
   "Command": "Command",
   "Animations": "Animations",
   "Reduced (no transitions, no blinking cursor)": "Reduced (no transitions, no blinking cursor)",
-  "Full": "Full"
+  "Full": "Full",
+  "Hint {{n}} of {{total}}": "Hint {{n}} of {{total}}",
+  "Next hint ({{n}} of {{total}})": "Next hint ({{n}} of {{total}})"
 }

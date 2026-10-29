@@ -100,7 +100,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
         let filteredHints = stepHints(proof, i)
         if (step.goals.length > 0 && !isLastStepWithErrors(proof, i)) {
           return <Hints key={`hints-${i}`}
-          hints={filteredHints} showHidden={help.has(i)} step={i}
+          hints={filteredHints} revealed={help.get(i) ?? 0} step={i}
           selected={selectedStep} toggleSelection={toggleSelection(i)} lastLevel={i == proof?.steps.length - 1}/>
         }
       })}

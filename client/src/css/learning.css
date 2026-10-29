@@ -1,0 +1,12 @@
+/* Learning aids: the written proof and notes below the editor, the hint ladder, the glossary
+   next to the inventory, and the world recap. */
+
+/* Hint ladder: "Hint 2 of 3" above a revealed hidden hint. */
+.hint-rung {
+  font-size: .75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  opacity: .8;
+  margin-bottom: .2em;
+}
