@@ -419,46 +419,29 @@ describe('Basic Lean4Game Features', () => {
   })
 
   describe('Written Proof', () => {
-    it('should translate the proof line by line with the tactics\' templates', () => {
+    it('should write out a completed proof', () => {
       cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
       cy.contains('Assumptions:', { timeout: 60000 })
-      cy.get('.written-proof summary').should('contain', 'Written proof')
-      cy.get('.written-proof').should('contain', 'appears here as you write it')
-
       typeCommand('rw [h]')
-      // `TacticDoc rw reads "Rewriting with {args}, it remains to show {goalAfter}."`
-      cy.get('.written-proof-line', { timeout: 30000 }).should('have.length', 1).first()
-        .should('contain', 'Rewriting with [h], it remains to show 2 + 2 = y.')
-      cy.get('.written-proof-line code').first().should('have.text', '[h]')
+      cy.contains('2 + 2 = y', { timeout: 30000 })
+      // Only completed proofs are written out.
+      cy.get('.written-proof').should('not.exist')
 
       typeCommand('rw [g]')
       cy.contains('Level completed!', { timeout: 60000 })
-      cy.get('.written-proof-line').should('have.length', 2).last()
-        .should('contain', 'Rewriting with [g], it remains to show nothing.')
+      cy.get('.written-proof', { timeout: 30000 }).should('contain', 'Your proof, written out')
       cy.get('.written-proof-qed').should('contain', '∎')
     })
 
-    it('should show tactics without a template as code', () => {
-      cy.visit('/#/g/test/TestGame/world/TestWorld/level/3')
-      cy.contains('intro first!', { timeout: 60000 })
-      typeCommand('intro x')
-      // `TacticDoc intro reads "Let {1} : {1:type} be arbitrary."`
-      cy.get('.written-proof-line', { timeout: 30000 }).first().should('contain', 'Let x : Nat be arbitrary.')
-      typeCommand('apply x')
-      cy.contains('Done!', { timeout: 30000 })
-      cy.get('.written-proof-line.untranslated').should('have.length', 1).find('code').should('have.text', 'apply x')
-    })
-
-    it('should be collapsible', () => {
+    it('should collect completed proofs in "My proofs"', () => {
       cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
       cy.contains('Assumptions:', { timeout: 60000 })
-      cy.get('.written-proof').should('have.attr', 'open')
-      cy.get('.written-proof summary').click()
-      cy.get('.written-proof').should('not.have.attr', 'open')
-      // remembered
-      cy.reload()
-      cy.contains('Assumptions:', { timeout: 60000 })
-      cy.get('.written-proof').should('not.have.attr', 'open')
+      typeCommand('rw [h]')
+      typeCommand('rw [g]')
+      cy.contains('Level completed!', { timeout: 60000 })
+      cy.get('.written-proof', { timeout: 30000 }).contains('All my proofs').click()
+      cy.get('[role="dialog"]').should('contain', 'Every proof you have completed, written out.')
+        .find('.written-proof').should('have.length', 1)
     })
   })
 
@@ -570,7 +553,7 @@ describe('Basic Lean4Game Features', () => {
       cy.get('.chat').contains('You are replaying this level without hints.', { timeout: 30000 })
       cy.get('.chat').should('not.contain', 'You can either start using h or g.')
       cy.get('.chat-panel').contains('button', 'Show more help!').should('not.exist')
-      cy.get('.written-proof-line').should('not.exist')
+      cy.get('.written-proof').should('not.exist')
       cy.get('.app-bar').find('[title="next level"]').should('not.be.disabled')
 
       // Solving it ends the replay.
