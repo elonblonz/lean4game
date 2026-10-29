@@ -1,22 +1,25 @@
 import React, { useEffect, useRef } from "react"
 import "../../css/inventory.css"
-import { closeDocAtom, InventoryTab, inventoryTabAtom, inventoryTilesAtoms, selectedDocTileAtom, theoremSubtabAtom } from "../../store/inventory-atoms"
+import { closeDocAtom, inventorySourceAtom, inventoryTabAtom, selectedDocTileAtom, theoremSubtabAtom } from "../../store/inventory-atoms"
 import { useAtom } from "jotai"
-import { InventoryOverview, InventoryTile, LevelInfo } from "../../api/game-data"
 import { InventorySubTabBar, InventoryTabBar } from "./tab_bars"
 import { InventoryList } from "./inventory_list"
 import { Documentation } from "./documentation"
 import { difficultyAtom } from "../../store/progress-atoms"
 
-/** The panel showing the user's inventory with tactics, definitions, and lemmas */
-export function InventoryPanel({levelInfo, visible = true} : {
-  levelInfo : LevelInfo | InventoryOverview | undefined,
+/** The panel showing the user's inventory with tactics, definitions, and lemmas.
+ *
+ * In a level it shows the level's inventory, otherwise the game's (see `inventorySourceAtom`).
+ */
+export function InventoryPanel({visible = true} : {
   visible?: boolean
 }) {
   const [tab] = useAtom(inventoryTabAtom)
   const [, setSubtab] = useAtom(theoremSubtabAtom)
   const [doc] = useAtom(selectedDocTileAtom)
   const [, closeDoc] = useAtom(closeDocAtom)
+  const [source] = useAtom(inventorySourceAtom)
+  const [difficulty] = useAtom(difficultyAtom)
 
   // Switching to another tab shows that tab's list: close the open doc (it is looked up
   // under the current tab, so it would show up empty).
@@ -25,42 +28,19 @@ export function InventoryPanel({levelInfo, visible = true} : {
     if (previousTab.current !== tab) closeDoc()
     previousTab.current = tab
   }, [tab])
-  const [, setTheoremInventory] = useAtom(inventoryTilesAtoms[InventoryTab.theorem])
-  const [, setTacticInventory] = useAtom(inventoryTilesAtoms[InventoryTab.tactic])
-  const [, setDefinitionInventory] = useAtom(inventoryTilesAtoms[InventoryTab.definition])
-  const [difficulty] = useAtom(difficultyAtom)
-
-  // TODO: this is some glue since not everything is in jotai yet
-  useEffect(() => {
-    setTheoremInventory(levelInfo?.lemmas ?? [])
-    setTacticInventory(levelInfo?.tactics ?? [])
-    setDefinitionInventory(levelInfo?.definitions ?? [])
-  }, [levelInfo])
 
   // If the level specifies `TheoremTab "Nat"`, we switch to this tab on loading.
-  // `defaultTab` is `null` or `undefined` otherwise, in which case we don't want to switch.
+  // `lemmaTab` is `null` or `undefined` otherwise, in which case we don't want to switch.
   useEffect(() => {
-    if (levelInfo?.lemmaTab) {
-      setSubtab(levelInfo?.lemmaTab)
+    if (source?.lemmaTab) {
+      setSubtab(source.lemmaTab)
     }
-  }, [levelInfo])
+  }, [source])
 
   return <div className={`column inventory-panel inventory panel ${visible ? '' : 'hidden'}`}>
     <InventoryTabBar />
     <InventorySubTabBar />
-    <InventoryList tiles={TabContent(tab, levelInfo)} docType={tab} enableAll={difficulty == 0} />
+    <InventoryList docType={tab} enableAll={difficulty == 0} />
     {doc && <Documentation type={tab} />}
-
   </div>
-}
-
-function TabContent(type: InventoryTab, levelInfo: LevelInfo | InventoryOverview | undefined): InventoryTile[] {
-  switch(type) {
-    case InventoryTab.theorem: return levelInfo?.lemmas ?? []
-    case InventoryTab.tactic: return levelInfo?.tactics ?? []
-    case InventoryTab.definition: return levelInfo?.definitions ?? []
-    default:
-      const _exhaustive: never = type
-      return []
-  }
 }

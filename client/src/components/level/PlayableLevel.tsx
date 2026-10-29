@@ -343,14 +343,14 @@ export function PlayableLevel() {
               onClick={() => setPageNumber(1)}>{t("Inventory")}</button>
           </div>
           <ExercisePanel codeviewRef={codeviewRef} visible={pageNumber == 0} />
-          <InventoryPanel levelInfo={levelInfo} visible={pageNumber == 1} />
+          <InventoryPanel visible={pageNumber == 1} />
         </div>
       </>
     :
       <Split minSize={0} snapOffset={200} sizes={[25, 50, 25]} className={`app-content level ${levelInfoIsLoading ? 'hidden' : ''}`}>
         <ChatPanel lastLevel={lastLevel}/>
         <ExercisePanel codeviewRef={codeviewRef} />
-        <InventoryPanel levelInfo={levelInfo} />
+        <InventoryPanel />
       </Split>
     }
   </>

@@ -1,8 +1,7 @@
 import { atomWithQuery } from 'jotai-tanstack-query'
 import { gameIdAtom, levelIdAtom, worldIdAtom } from './location-atoms'
-import { Doc, GameInfo, InventoryOverview, LevelInfo } from '../api/game-data'
+import { GameInfo, LevelInfo } from '../api/game-data'
 import { atom } from 'jotai'
-import { InventoryTab } from './inventory-atoms'
 import { atomFamily } from 'jotai-family'
 
 /** The info about all games */

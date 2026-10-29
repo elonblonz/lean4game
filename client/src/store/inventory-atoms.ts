@@ -1,10 +1,11 @@
-import { Atom, atom } from "jotai";
-import { Doc, InventoryOverview, InventoryTile } from "../api/game-data";
+import { Atom, atom, PrimitiveAtom } from "jotai";
+import { Doc, InventoryOverview, InventoryTile, LevelInfo } from "../api/game-data";
 import { gameIdAtom, levelIdAtom, worldIdAtom } from "./location-atoms";
 import { atomWithQuery } from "jotai-tanstack-query";
 import { progressAtom } from "./progress-atoms";
 import { preferencesAtom } from "./preferences-atoms";
 import { atomFamily } from "jotai-family";
+import { levelInfoAtom } from "./query-atoms";
 
 /** Valid inventory tabs */
 export enum InventoryTab {
@@ -85,7 +86,7 @@ export const inventoryTabAtom = atom(InventoryTab.tactic)
 /** Currently selected subtabs for all tabs. The active one should be
  * accessed through `inventorySubtabAtom` below.
  */
-export const inventorySubtabAtoms: Record<InventoryTab, ReturnType<typeof atom<string>>> = {
+export const inventorySubtabAtoms: Record<InventoryTab, PrimitiveAtom<string | null>> = {
   [InventoryTab.theorem]: atom(null as string | null),
   [InventoryTab.tactic]: atom(null as string | null),
   [InventoryTab.definition]: atom(null as string | null),
@@ -104,13 +105,21 @@ export const closeDocAtom = atom(null, (get, set) => {
   set(selectedDocTileAtom, null)
 })
 
-/** The entire inventory
- * TODO: Currently set with a `useEffect`. Should probably be a query atom...
+/**
+ * Where the inventory comes from: in a level, the level's info (which knows what is new,
+ * disabled, etc. in this level); on the welcome page and in a world's introduction, the
+ * game's inventory overview.
  */
-export const inventoryTilesAtoms: Record<InventoryTab, ReturnType<typeof atom<InventoryTile[]>>> = {
-  [InventoryTab.theorem]: atom([]),
-  [InventoryTab.tactic]: atom([]),
-  [InventoryTab.definition]: atom([]),
+export const inventorySourceAtom = atom<LevelInfo | InventoryOverview | undefined>(get => {
+  const levelId = get(levelIdAtom)
+  return levelId ? get(levelInfoAtom).data : get(inventoryOverviewAtom).data
+})
+
+/** The entire inventory, per tab */
+export const inventoryTilesAtoms: Record<InventoryTab, Atom<InventoryTile[]>> = {
+  [InventoryTab.theorem]: atom(get => get(inventorySourceAtom)?.lemmas ?? []),
+  [InventoryTab.tactic]: atom(get => get(inventorySourceAtom)?.tactics ?? []),
+  [InventoryTab.definition]: atom(get => get(inventorySourceAtom)?.definitions ?? []),
 }
 
 /** New items per tab */
@@ -124,10 +133,12 @@ export const inventoryTabNewTilesAtom: Atom<Record<InventoryTab, InventoryTile[]
 export const inventoryTabRecentTilesAtom: Atom<Record<InventoryTab, InventoryTile[]>> = atom( get => {
   const worldId = get(worldIdAtom)
   const levelId = get(levelIdAtom)
+  // Item(s) proved in the preceding level
+  const recent = (it: InventoryTile) => !!levelId && it.world == worldId && it.level == levelId - 1
   return {
-    [InventoryTab.theorem]: get(inventoryTilesAtoms[InventoryTab.theorem]).filter(it => it.world == worldId && it.level == levelId - 1),
-    [InventoryTab.tactic]: get(inventoryTilesAtoms[InventoryTab.tactic]).filter(it => it.world == worldId && it.level == levelId - 1),
-    [InventoryTab.definition]: get(inventoryTilesAtoms[InventoryTab.definition]).filter(it => it.world == worldId && it.level == levelId - 1),
+    [InventoryTab.theorem]: get(inventoryTilesAtoms[InventoryTab.theorem]).filter(recent),
+    [InventoryTab.tactic]: get(inventoryTilesAtoms[InventoryTab.tactic]).filter(recent),
+    [InventoryTab.definition]: get(inventoryTilesAtoms[InventoryTab.definition]).filter(recent),
   }
 })
 

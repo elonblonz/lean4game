@@ -59,7 +59,7 @@ export function Documentation({ type } : {type : InventoryTab}) {
             ev.preventDefault()
             if (!docTile.world || !docTile.level) return
             navigateAcrossWorlds(docTile.world, docTile.level)
-          }}>{gT(gameInfo?.worlds?.nodes[docTile.world]?.title ?? docTile.world ?? "")}, {t("Level")} {docTile.level}</a></li>}
+          }}>{gT((docTile.world && gameInfo?.worlds?.nodes[docTile.world]?.title) || docTile.world || "")}, {t("Level")} {docTile.level}</a></li>}
         </ul>
       </>
     }

@@ -19,7 +19,6 @@ import { gameIdAtom } from '../store/location-atoms'
 import { useAtom } from 'jotai'
 import { readGameIntroAtom } from '../store/chat-atoms'
 import { gameInfoAtom } from '../store/query-atoms'
-import { inventoryOverviewAtom } from '../store/inventory-atoms'
 import { mobileAtom } from '../store/preferences-atoms'
 
 
@@ -70,7 +69,6 @@ function Welcome() {
   const [gameId] = useAtom(gameIdAtom)
   const [readGameIntro] = useAtom(readGameIntroAtom)
   const [{ data: gameInfo, isLoading: gameInfoIsLoading }] = useAtom(gameInfoAtom)
-  const [{ data: inventory }] = useAtom(inventoryOverviewAtom)
 
   // Load the namespace of the game
   i18n.loadNamespaces(gameId ?? "")
@@ -102,14 +100,14 @@ function Welcome() {
             : pageNumber == 1 ?
               <WorldTreePanel />
             :
-              <InventoryPanel levelInfo={inventory} />
+              <InventoryPanel />
             )}
           </div>
         :
           <Split className="welcome" minSize={0} snapOffset={200}  sizes={[25, 50, 25]}>
             <IntroductionPanel setPageNumber={setPageNumber} />
             <WorldTreePanel />
-            <InventoryPanel levelInfo={inventory} />
+            <InventoryPanel />
           </Split>
       }
     </div>
