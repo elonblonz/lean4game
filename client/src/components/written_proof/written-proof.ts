@@ -16,7 +16,7 @@
  * KaTeX) in the game and put into a LaTeX document as it is.
  */
 import type { ProofState, InteractiveGoal } from '../../api/rpc_api'
-import { Expr, parse, tex, words, meaning, equal, negated, exprToLatex } from './lean-expr'
+import { Expr, parse, tex, words, meaning, equal, negated, exprToLatex, atom } from './lean-expr'
 import { Derived, Env, explainTerm } from './explain-term'
 import { fillTemplate, tacticKey } from '../../utils/written-proof'
 
@@ -141,6 +141,9 @@ const DEFINITIONS: Record<string, string> = {
   mem_pair: 'a set of two elements',
   mem_symmDiff: 'symmetric difference', symmDiff_def: 'symmetric difference', mem_univ: '$\\mathcal{U}$',
   mem_empty_iff_false: '$\\emptyset$', not_not: 'double negation', ne_eq: '$\\neq$', ext_iff: 'set equality',
+  // Functions
+  mem_image: 'image', mem_preimage: 'preimage', comp_apply: 'composition', 'Function.comp_apply': 'composition',
+  id_eq: 'the identity function', one_to_one_def: 'one-to-one', onto_def: 'onto',
 }
 
 const codeName = (name: string) => `$\\mathtt{${name.replace(/_/g, '\\_')}}$`
@@ -336,7 +339,9 @@ class Writer {
       case 'intros':
       case 'ext': {
         const objs = d.objects.map(h => math(h.name))
-        if (tactic === 'ext') this.note(out, `Two sets are equal if they have the same elements. So we show that ${say(goalText(next))} for every $${d.objects.map(h => toLatex(h.name)).join(', ')}$.`, i)
+        // `ext` on functions leaves an equation of values, on sets an `↔`.
+        const functions = tactic === 'ext' && !!next && /^[^↔]* = [^↔]*$/.test(goalText(next))
+        if (tactic === 'ext') this.note(out, `${functions ? 'Two functions are equal if they have the same value at every input' : 'Two sets are equal if they have the same elements'}. So we show that ${say(goalText(next))} for every $${d.objects.map(h => toLatex(h.name)).join(', ')}$.`, i)
         else if (ge && isBinOp(ge, '⊆')) this.note(out, `To prove ${say(g)}, we show that ${meaning(ge)}.`, i)
         else if (ge && negated(ge) && !d.objects.length)
           this.note(out, `To prove ${say(g)}, we suppose ${say(negated(ge)!)} and derive a contradiction.`, i)
@@ -350,7 +355,7 @@ class Writer {
         out.push(block)
         if (objs.length) {
           const was = objs.length > 1 ? 'were' : 'was'
-          const what = tactic === 'ext' ? `the two sets have the same elements, that is, ${say(g)}`
+          const what = tactic === 'ext' ? `the two ${functions ? 'functions have the same value everywhere' : 'sets have the same elements'}, that is, ${say(g)}`
             : ge && meaning(ge) ? `${meaning(ge)}, that is, ${say(g)}` : say(g)
           this.note(out, `Since ${list(objs)} ${was} arbitrary, ${what}.`, i)
         } else this.note(out, `This shows that ${say(g)}.`, i)
@@ -450,6 +455,11 @@ class Writer {
           return
         }
         const objs = d.objects.map(o => math(o.name))
+        // `obtain ⟨x, hx, rfl⟩ := h` with `h : y ∈ f '' S` replaces `y` by `f x`.
+        const src = sourceStmt ? parse(sourceStmt) : undefined
+        if (/\brfl\b/.test(cmd) && src?.kind === 'bin' && src.op === '∈' && src.left.kind === 'atom' &&
+            src.right.kind === 'bin' && src.right.op === "''" && d.objects.length === 1)
+          this.note(out, `So $${tex(src.left)} = ${tex({ kind: 'app', fn: src.right.left, arg: atom(d.objects[0].name) })}$ for some $${toLatex(d.objects[0].name)} \\in ${tex(src.right.right)}$; we write $${tex({ kind: 'app', fn: src.right.left, arg: atom(d.objects[0].name) })}$ for $${tex(src.left)}$ from now on.`, i)
         for (const h of [...d.assumptions, ...d.changed])
           sc.set(h.fvarId, this.fact(out, h.type, objs.length ? `${from}, choosing ${list(objs)}` : from, i))
         if (next) this.go(next, sc, out, i)
@@ -584,6 +594,7 @@ class Writer {
 export function theoremSays(statement: string): string | undefined {
   // The binders `(...)`, `{...}`, `[...]` before the last ` : `, at the top level.
   const assumptions: Expr[] = []
+  const types = typeVariables(statement)
   let depth = 0, start = -1, colon = -1
   for (let k = 0; k < statement.length; k++) {
     const c = statement[k]
@@ -594,7 +605,7 @@ export function theoremSays(statement: string): string | undefined {
         const inner = statement.slice(start + 1, k)
         const sep = inner.indexOf(' : ')
         const type = sep >= 0 ? parse(inner.slice(sep + 3)) : undefined
-        if (type && isProposition(type)) assumptions.push(type)
+        if (type && isProposition(type, types)) assumptions.push(type)
       }
     } else if (depth === 0 && c === ':' ) colon = k
   }
@@ -606,9 +617,28 @@ export function theoremSays(statement: string): string | undefined {
     : words(conclusion)
 }
 
-/** Whether an expression is a statement (rather than a type such as `Set U`). */
-function isProposition(e: Expr): boolean {
+/** Whether an expression is a statement (rather than a type such as `Set U`, or `A → B` for a
+ * function `f : A → B`, where `A` and `B` are among `types`). */
+function isProposition(e: Expr, types: Set<string> = new Set()): boolean {
+  if (e.kind === 'bin' && e.op === '→' && isType(e.left, types) && isType(e.right, types)) return false
   return e.kind === 'bin' || e.kind === 'not' || e.kind === 'binder'
+}
+
+/** `A`, `Set A`, `A → B`, for type variables `A` and `B`. */
+function isType(e: Expr, types: Set<string>): boolean {
+  if (e.kind === 'atom') return types.has(e.text)
+  if (e.kind === 'app') return isType(e.arg, types)
+  return e.kind === 'bin' && e.op === '→' && isType(e.left, types) && isType(e.right, types)
+}
+
+/** The type variables of a theorem's statement: the binders `{A B}` (with no type, as the
+ * documentation prints `variable {A B : Type}`) and `(A : Type)`. */
+function typeVariables(statement: string): Set<string> {
+  const out = new Set<string>()
+  for (const m of statement.matchAll(/[({]([^(){}:]+?)(?:\s*:\s*(Type|Sort)[^(){}]*)?[)}]/g)) {
+    if (m[2] || m[0].startsWith('{')) for (const v of m[1].trim().split(/\s+/)) if (/^[A-Z]\w*$/.test(v)) out.add(v)
+  }
+  return out
 }
 
 /** "from 1 and 3: every element of $A$ is an element of $B$" */

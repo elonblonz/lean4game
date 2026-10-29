@@ -4,7 +4,8 @@
  * Lean leaves out brackets wherever its precedences allow: it prints `(A ∩ B) ∪ C` as
  * `A ∩ B ∪ C`, and `(A ∪ B) ∪ C` as `A ∪ B ∪ C`. On paper both need brackets, so the
  * expression is parsed and printed again, with brackets around every nested set operation.
- * Only the notation used in set theory is understood; anything else is kept as it is.
+ * Only the notation used in set theory (and for functions: images, preimages, composition) is
+ * understood; anything else is kept as it is.
  */
 
 export type Expr = Node
@@ -23,8 +24,13 @@ const BINARY: Record<string, [number, 'left' | 'right' | 'none']> = {
   '↔': [20, 'none'], '→': [25, 'right'], '∨': [30, 'right'], '∧': [35, 'right'],
   '=': [50, 'none'], '≠': [50, 'none'], '∈': [50, 'none'], '∉': [50, 'none'],
   '⊆': [50, 'none'], '⊂': [50, 'none'], '⊈': [50, 'none'],
-  '∪': [65, 'left'], '∩': [70, 'left'], '\\': [70, 'left'], '∆': [100, 'left'],
+  '∪': [65, 'left'], '∩': [70, 'left'], '\\': [70, 'left'],
+  // Lean prints `g '' (f '' S)` as `g '' f '' S`.
+  "''": [80, 'right'], "⁻¹'": [80, 'right'],
+  '∘': [90, 'right'], '∆': [100, 'left'],
 }
+/** Image and preimage, printed with square brackets (`f[S]`), so they need no brackets around them. */
+const IMAGE_OPS = new Set(["''", "⁻¹'"])
 const SET_OPS = new Set(['∪', '∩', '\\', '∆'])
 const LOGIC_OPS = new Set(['↔', '→', '∨', '∧'])
 const RELATIONS = new Set(['=', '≠', '∈', '∉', '⊆', '⊂', '⊈'])
@@ -34,7 +40,7 @@ function tokenize(s: string): string[] {
   // `𝒫` is outside the Basic Multilingual Plane (two UTF-16 code units, which `.` would split
   // without the `u` flag): use `℘` instead.
   s = s.replace(/𝒫/g, '℘')
-  const re = /\s*(⋃₀|⋂₀|[A-Za-z_Ͱ-Ͽ][\w'!?.Ͱ-Ͽ₀-₉✝]*|\d+|.)/g
+  const re = /\s*(⋃₀|⋂₀|''|⁻¹'|[A-Za-z_Ͱ-Ͽ][\w'!?.Ͱ-Ͽ₀-₉✝]*|\d+|.)/g
   let m: RegExpExecArray | null
   while ((m = re.exec(s)) && m[0]) if (m[1].trim()) out.push(m[1])
   return out
@@ -135,7 +141,7 @@ class Parser {
 const TEX_OP: Record<string, string> = {
   '↔': '\\leftrightarrow', '→': '\\to', '∨': '\\lor', '∧': '\\land',
   '=': '=', '≠': '\\neq', '∈': '\\in', '∉': '\\notin', '⊆': '\\subseteq', '⊂': '\\subsetneq', '⊈': '\\not\\subseteq',
-  '∪': '\\cup', '∩': '\\cap', '\\': '\\setminus', '∆': '\\mathbin{\\triangle}',
+  '∪': '\\cup', '∩': '\\cap', '\\': '\\setminus', '∆': '\\mathbin{\\triangle}', '∘': '\\circ',
 }
 const NEGATED: Record<string, string> = { '⊆': '⊈', '=': '≠', '∈': '∉' }
 
@@ -149,6 +155,7 @@ function atomTex(text: string): string {
   if (text === 'True') return '\\top'
   if (text === 'univ') return '\\mathcal{U}'
   if (text === '∅') return '\\emptyset'
+  if (text === 'id') return '\\mathrm{id}'
   let t = text.replace(/✝/g, '^{\\dagger}')
   t = t.replace(/[₀-₉]+/g, d => `_{${[...d].map(c => c.charCodeAt(0) - 0x2080).join('')}}`)
   t = t.replace(/[Ͱ-Ͽ]/g, c => GREEK[c] ? `\\${GREEK[c]} ` : c)
@@ -187,19 +194,23 @@ export function tex(n: Node): string {
     }
     case 'set': return `\\{${n.items.map(tex).join(', ')}\\}`
     case 'builder': return `\\{${tex(n.v)} \\mid ${tex(n.body)}\\}`
-    case 'app': {
-      const arg = n.arg.kind === 'atom' || n.arg.kind === 'set' ? tex(n.arg) : `(${tex(n.arg)})`
-      return `${tex(n.fn)}\\,${arg}`
-    }
+    // A function's value: `f(x)`, `(g \circ f)(x)`, `g(f(x))`.
+    case 'app': return `${fnTex(n.fn)}(${tex(n.arg)})`
     case 'bin': {
+      if (n.op === "''") return `${fnTex(n.left)}[${tex(n.right)}]`
+      if (n.op === "⁻¹'") return `${fnTex(n.left)}^{-1}[${tex(n.right)}]`
       const wrap = (child: Node, side: 'left' | 'right') => needsParens(n, child, side) ? `(${tex(child)})` : tex(child)
       return `${wrap(n.left, 'left')} ${TEX_OP[n.op] ?? n.op} ${wrap(n.right, 'right')}`
     }
   }
 }
 
+/** A function, with brackets unless it is a name or a value of a function. */
+const fnTex = (f: Node) => f.kind === 'atom' || f.kind === 'app' ? tex(f) : `(${tex(f)})`
+
 function needsParens(parent: Node & { kind: 'bin' }, child: Node, side: 'left' | 'right'): boolean {
   if (child.kind === 'binder') return true
+  if (child.kind === 'bin' && IMAGE_OPS.has(child.op)) return false
   if (SET_OPS.has(parent.op)) {
     // Every nested set operation gets brackets, also `(A ∪ B) ∪ C`, and so do `⋃ F` and `⋂ F`.
     return isBin(child) || (child.kind === 'prefix' && child.op !== '℘')
