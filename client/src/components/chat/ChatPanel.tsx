@@ -7,8 +7,9 @@ import { mobileAtom } from '../../store/preferences-atoms'
 import { gameIdAtom, levelIdAtom } from '../../store/location-atoms'
 import { levelInfoAtom } from '../../store/query-atoms'
 import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms'
-import { proofAtom } from '../../store/editor-atoms'
-import { DeletedHints, filterHints, Hint, Hints, isLastStepWithErrors, lastStepHasErrors, MoreHelpButton } from '../hints'
+import { lastValidStepAtom, proofAtom } from '../../store/proof-atoms'
+import { DeletedHints, Hint, Hints, MoreHelpButton } from '../hints'
+import { isLastStepWithErrors, stepHints } from '../../utils/proof'
 import Markdown from 'react-markdown'
 import { faArrowRight, faHome } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -29,7 +30,7 @@ export const NextLevelButton = React.forwardRef<HTMLButtonElement, {lastLevel: b
 })
 
 /** Appears on the left of playable levels */
-export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visible: boolean}) {
+export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visible?: boolean}) {
   let { t } = useTranslation()
   const { t : gT } = useGameTranslation()
   const chatRef = useRef<HTMLDivElement>(null)
@@ -42,7 +43,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
   const [deletedChat] = useAtom(deletedChatAtom)
   const [selectedStep, setSelectedStep] = useAtom(selectedStepAtom)
 
-  let k = proof?.steps.length ? proof?.steps.length - (lastStepHasErrors(proof) ? 2 : 1) : 0
+  const [k] = useAtom(lastValidStepAtom)
 
   function toggleSelection(line: number) {
     return (ev: any) => {
@@ -95,7 +96,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
           hint={{text: it, hidden: false, rawText: it, varNames: []}} step={0} selected={selectedStep} toggleSelection={toggleSelection(0)} />
       ))}
       {proof?.steps.map((step, i) => {
-        let filteredHints = filterHints(step.goals[0]?.hints, proof?.steps[i-1]?.goals[0]?.hints)
+        let filteredHints = stepHints(proof, i)
         if (step.goals.length > 0 && !isLastStepWithErrors(proof, i)) {
           return <Hints key={`hints-${i}`}
           hints={filteredHints} showHidden={help.has(i)} step={i}

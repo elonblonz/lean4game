@@ -1,5 +1,5 @@
 import { atomWithQuery } from "jotai-tanstack-query"
-import { GameTileWithName } from "./api"
+import { GameTileWithName } from "../api/game-data"
 import { atom } from "jotai"
 
 

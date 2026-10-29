@@ -1,9 +1,10 @@
-import { InteractiveHypothesisBundle, InteractiveHypothesisBundle_nonAnonymousNames, MVarId, TaggedText_stripTags } from "@leanprover/infoview-api"
+import { InteractiveHypothesisBundle_nonAnonymousNames, MVarId, TaggedText_stripTags } from "@leanprover/infoview-api"
+import { GameHypothesisBundle } from "../../../../api/rpc_api"
 import React from "react"
 import {useAppendTypewriterInput} from "../useAppendTypewriterInput"
 
 interface HypProps {
-    hyp: InteractiveHypothesisBundle
+    hyp: GameHypothesisBundle
     mvarId?: MVarId
 }
 
@@ -22,9 +23,11 @@ export function Hyp({ hyp: h, mvarId }: HypProps) {
         <span
             className={namecls + (isInaccessibleName(n) ? 'goal-inaccessible ' : '')}
             key={i}
-            // FIXME: 3rd argument looks wrong
+            // An assumption is passed as `isTheorem` too: on an empty command line it is
+            // used like a theorem (`rw [h]`), afterwards it is appended as `at h`.
             onClick={ev => {
-                appendTypewriterInput(ev.shiftKey, n, (h as any).isAssumption ?? false, (h as any).isAssumption ?? false)
+                const isAssumption = h.isAssumption ?? false
+                appendTypewriterInput(ev.shiftKey, n, isAssumption, isAssumption)
                 ev.stopPropagation()
             } }
         >{n}
@@ -33,6 +36,6 @@ export function Hyp({ hyp: h, mvarId }: HypProps) {
         <strong className="goal-hyp">{names}</strong>
         :&nbsp;
         {TaggedText_stripTags(h.type)}
-        {h.val && `&nbsp;:=&nbsp;${h.val}`}
+        {h.val && <>&nbsp;:=&nbsp;{TaggedText_stripTags(h.val)}</>}
     </div>
 }

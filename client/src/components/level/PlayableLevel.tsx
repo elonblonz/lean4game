@@ -2,15 +2,9 @@ import { useTranslation } from "react-i18next"
 import { useGameTranslation } from "../../utils/translation"
 import { useEffect, useRef, useState } from "react"
 import { useAtom } from "jotai"
-import { clientAtom, codeStorageAtom, rpcSessionAtom, editorAtom, leanMonacoAtom, lockEditorModeAtom, modelAtom, typewriterModeAtom, uriAtom, proofQueryAtom, needsReconnect, levelUriAtom, modelVersionAtom, syncedVersionAtom, typewriterContentAtom, currentProofAtom } from "../../store/editor-atoms"
-import { deletedChatAtom, selectedStepAtom } from "../../store/chat-atoms"
-import { inventoryAtom, selectedDocTileAtom } from "../../store/inventory-atoms"
-import { completedAtom, difficultyAtom } from "../../store/progress-atoms"
-import { gameIdAtom, levelIdAtom, worldIdAtom } from "../../store/location-atoms"
+import { levelIdAtom, worldIdAtom } from "../../store/location-atoms"
 import { mobileAtom } from "../../store/preferences-atoms"
-import { gameInfoAtom, levelInfoAtom } from "../../store/query-atoms"
-import { LeanMonacoEditor, RpcSessionAtPos } from "lean4monaco"
-import { RpcConnectParams } from "@leanprover/infoview-api"
+import { gameInfoAtom, isLastLevelAtom, levelInfoAtom } from "../../store/query-atoms"
 import { CircularProgress } from "@mui/material"
 import { LevelAppBar } from "../app_bar"
 import React from "react"
@@ -18,334 +12,56 @@ import { ExercisePanel } from "./ExercisePanel"
 import { InventoryPanel } from "../inventory/inventory_panel"
 import { ChatPanel } from "../chat/ChatPanel"
 import Split from 'react-split'
+import { useLeanConnection } from "./useLeanConnection"
+import { useLevelGameLogic } from "./useLevelGameLogic"
 
+/**
+ * A level with a proof to play: the chat (hints), the exercise (editor or typewriter) and the
+ * inventory. On mobile, only one of the exercise and the inventory is shown at a time.
+ *
+ * The level's logic is in two hooks: `useLeanConnection` (editor and Lean) and
+ * `useLevelGameLogic` (what the game does with the proof).
+ */
 export function PlayableLevel() {
   let { t } = useTranslation()
   const { t : gT } = useGameTranslation()
   const codeviewRef = useRef<HTMLDivElement>(null)
-  const [leanMonaco] = useAtom(leanMonacoAtom)
-  const [gameId] = useAtom(gameIdAtom)
   const [worldId] = useAtom(worldIdAtom)
   const [levelId] = useAtom(levelIdAtom)
-  const [typewriterMode, setTypewriterMode] = useAtom(typewriterModeAtom)
   const [mobile] = useAtom(mobileAtom)
-  const [code, setCode] = useAtom(codeStorageAtom)
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   const [{ data: levelInfo, isLoading: levelInfoIsLoading }] = useAtom(levelInfoAtom)
+  const [lastLevel] = useAtom(isLastLevelAtom)
+
+  useLeanConnection(codeviewRef)
+  useLevelGameLogic()
 
   // Only for mobile layout
   const [pageNumber, setPageNumber] = useState(0)
   // Show the proof again when another level is opened
   useEffect(() => { setPageNumber(0) }, [worldId, levelId])
-  // set to true to prevent switching between typewriter and editor
-  const [lockEditorMode] = useAtom(lockEditorModeAtom)
-  const lastLevel = worldId && (levelId !== undefined) && levelId >= (gameInfo?.worldSize?.[worldId] ?? 0)
 
-  // When clicking on an inventory item, the inventory is overlayed by the item's doc.
-  // If this state is set to a pair `(name, type)` then the according doc will be open.
-  // Set `inventoryDoc` to `null` to close the doc
-  const [inventoryDoc, setInventoryDoc] = useState<{name: string, type: string} | null>(null)
-  function closeInventoryDoc () {setInventoryDoc(null)}
-
-  const [editor, setEditor] = useAtom(editorAtom)
-  const [model] = useAtom(modelAtom)
-  const [client, setClient] = useAtom(clientAtom)
-  const [uri] = useAtom(uriAtom)
-  const [rpcSess, setRpcSess] = useAtom(rpcSessionAtom)
-  const [levelUri] = useAtom(levelUriAtom)
-  const [modelVersion, setModelVersion] = useAtom(modelVersionAtom)
-  const [syncedVersion, setSyncedVersion] = useAtom(syncedVersionAtom)
-  const [, setTypewriterContent] = useAtom(typewriterContentAtom)
-  const [, setDeletedChat] = useAtom(deletedChatAtom)
-  const [, setSelectedStep] = useAtom(selectedStepAtom)
-  const [, setSelectedDocTile] = useAtom(selectedDocTileAtom)
-
-  // Start the editor, following lean4monaco demo. Each level has its own document,
-  // `file:///<world>/<level>.lean` (the relay gives Lean one level at a time).
-  useEffect(() => {
-    if (leanMonaco) {
-      const leanMonacoEditor = new LeanMonacoEditor()
-      let disposed = false
-
-      ;(async () => {
-        await leanMonaco!.whenReady
-        console.debug('[lean4game]: starting editor')
-        await leanMonacoEditor.start(codeviewRef.current!, levelUri, code ?? "")
-        console.debug('[lean4game]: editor started')
-        if (disposed) return
-        // The document was opened with this version; changes from now on are reported by
-        // the client's `didChange` (see below).
-        const version = leanMonacoEditor.editor?.getModel()?.getVersionId()
-        setModelVersion(version)
-        setSyncedVersion(version)
-        setEditor(leanMonacoEditor.editor)
-      })()
-
-      return () => {
-        disposed = true
-        leanMonacoEditor.dispose()
-        // Forget everything that belongs to this level, so the next one doesn't use it
-        // (all of these are global atoms).
-        setEditor(null)
-        setRpcSess(sess => { sess?.dispose(); return undefined })
-        setModelVersion(undefined)
-        setSyncedVersion(undefined)
-        setTypewriterContent("")
-        setDeletedChat([])
-        setSelectedStep(undefined)
-        setSelectedDocTile(null)
-      }
-    }
-  }, [leanMonaco, worldId, levelId])
-
-  // Persist editor text into progress whenever the model changes. Only for this level's
-  // editor: right after switching levels, `editor` can still be the previous level's.
-  useEffect(() => {
-    const model = editor?.getModel()
-    if (!editor || !model || model.uri.toString() !== levelUri) return
-
-    setCode(editor.getValue())
-    const disposable = editor.onDidChangeModelContent(() => {
-      setCode(editor.getValue())
-      setModelVersion(model.getVersionId())
-    })
-
-    return () => {
-      disposable.dispose()
-    }
-  }, [editor, setCode, levelUri])
-
-  // The saved code is the truth: if it changes from outside the editor (progress erased or
-  // uploaded), or the editor kept an older text from a previous visit, update the editor.
-  useEffect(() => {
-    const model = editor?.getModel()
-    if (!editor || !model || model.uri.toString() !== levelUri) return
-    const saved = code ?? ""
-    if (editor.getValue() !== saved) model.setValue(saved)
-  }, [editor, code, levelUri])
-
-  // Tell the game server the player's rules setting and unlocked items: Lean uses them to
-  // decide which tactics and theorems are allowed.
-  // (The client drops notifications until its connection runs, so they are also sent right
-  // before connecting the RPC session, below.)
-  const [difficulty] = useAtom(difficultyAtom)
-  const [inventory] = useAtom(inventoryAtom)
-  const optionsRef = useRef({ difficulty, inventory: inventory ?? [] })
-  optionsRef.current = { difficulty, inventory: inventory ?? [] }
-  useEffect(() => {
-    client?.sendNotification('$/lean4game/options', optionsRef.current)
-  }, [client, difficulty, JSON.stringify(inventory)])
-
-  // Track which version of the text Lean has: the proof state is only requested for that.
-  useEffect(() => {
-    if (!client) return
-    const disposable = client.didChange((params: { textDocument: { uri: string, version: number } }) => {
-      if (decodeURIComponent(params.textDocument.uri) == decodeURIComponent(levelUri)) {
-        setSyncedVersion(params.textDocument.version)
-      }
-    })
-    return () => disposable.dispose()
-  }, [client, levelUri])
-
-  // In case a change is never reported (it should be), don't wait for it forever.
-  useEffect(() => {
-    if (modelVersion === undefined || syncedVersion === modelVersion) return
-    const timer = setTimeout(() => {
-      console.warn(`[lean4game] Lean did not report receiving version ${modelVersion}; asking anyway`)
-      setSyncedVersion(modelVersion)
-    }, 2000)
-    return () => clearTimeout(timer)
-  }, [modelVersion, syncedVersion])
-
-  // wait until the client exists
-  // TODO: it didn't work to define an atom `get(editorAtom)?.clientProvider?.getClients()?.[0]`
-  // is there a way to tell atoms to fully reevaluate until they get a non-null result?
-  useEffect(() => {
-    const updateClient = () => {
-      const clients = leanMonaco?.clientProvider?.getClients()
-      const firstClient = clients?.[0] ?? null
-      if (firstClient) {
-        setClient(firstClient)
-        return true
-      }
-      return false
-    }
-    updateClient()
-    const interval = setInterval(() => {
-      // try to get `client` until successful
-      if (updateClient()) {
-        clearInterval(interval)
-      }
-    }, 500)
-    return () => clearInterval(interval)
-  }, [leanMonaco?.clientProvider])
-
-  // Start an RPC session for this level once its editor exists.
-  const connecting = useRef(false)
-  useEffect(() => {
-    if (rpcSess?.uri === levelUri) return
-    if (!client || uri?.toString() !== levelUri) return
-    let cancelled = false
-    function connect() {
-      if (connecting.current || !client) return
-      connecting.current = true
-      console.debug('rpc session connecting...')
-      client.sendNotification('$/lean4game/options', optionsRef.current)
-      client.sendRequest('$/lean/rpc/connect', {uri: levelUri} as RpcConnectParams).then(result => {
-        const sessionId = result.sessionId
-        console.debug(`rpc session id: ${sessionId}`)
-        const _rpcSess = new RpcSessionAtPos(client, sessionId, levelUri)
-        if (cancelled) { _rpcSess.dispose(); return }
-        setRpcSess(old => { old?.dispose(); return _rpcSess })
-      }).catch((err) => {
-        console.debug("rpc connect failed: ", err)
-      }).finally(() => {
-        connecting.current = false
-      })
-    }
-    connect()
-    // Retry until it works, e.g. while Lean is still starting.
-    const interval = setInterval(connect, 2000)
-    return () => {
-      cancelled = true
-      clearInterval(interval)
-    }
-  }, [client, uri, rpcSess, levelUri])
-
-  // If Lean no longer knows our RPC session (e.g. the server restarted the file worker),
-  // drop it so that the effect above connects a new one.
-  const [{ error: proofError }] = useAtom(proofQueryAtom)
-  useEffect(() => {
-    if (needsReconnect(proofError)) {
-      console.debug('rpc session outdated, reconnecting')
-      setRpcSess(sess => { sess?.dispose(); return undefined })
-    }
-  }, [proofError])
-
-  // When the proof is complete, mark the level as completed and add its new items (and the
-  // theorem just proved) to the inventory. Only for a proof state of the current text.
-  const [currentProof] = useAtom(currentProofAtom)
-  const [, setCompleted] = useAtom(completedAtom)
-  const [, addToInventory] = useAtom(inventoryAtom)
-  useEffect(() => {
-    if (!currentProof?.completed || !levelInfo) return
-    setCompleted(true)
-    const newTiles = [
-      ...levelInfo.tactics ?? [],
-      ...levelInfo.lemmas ?? [],
-      ...levelInfo.definitions ?? []
-    ].filter(tile => tile.new).map(tile => tile.name)
-    // Levels whose statement has no name report it as "[anonymous]".
-    if (levelInfo.statementName != null && levelInfo.statementName !== "[anonymous]") {
-      newTiles.push(levelInfo.statementName)
-    }
-    addToInventory(newTiles)
-  }, [currentProof, levelInfo])
-
-
-  useEffect (() => {
-    // Lock editor mode
-    if (levelInfo?.template) {
-
-      if (model) {
-        let code = model.getLinesContent()
-
-        // TODO: It does seem that the template is always indented by spaces.
-        // This is a hack, assuming there are exactly two.
-        if (!code.join("").trim().length) {
-          console.debug(`inserting template:\n${levelInfo?.template}`)
-          // TODO: This does not work! HERE
-          // Probably overwritten by a query to the server
-          // DOC: REMOVED editor here
-          editor?.executeEdits("template-writer", [{
-            range: model.getFullModelRange(),
-            text: levelInfo?.template + `\n`,
-            forceMoveMarkers: true
-          }])
-        } else {
-          console.debug(`not inserting template.`)
-        }
-      }
-    } else {
-    }
-  }, [levelInfo, levelId, worldId, gameId, editor])
-
-
-  // Focus the editor when switching to editor mode.
-  useEffect(() => {
-    if (!typewriterMode) editor?.focus()
-  }, [typewriterMode])
-
-  // useEffect(() => {
-  //   // Forget whether hidden hints are displayed for steps that don't exist yet
-  //   if (proof?.steps.length) {
-  //     console.debug(Array.from(help))
-  //     setHelp([...new Set(Array.from(help).filter(i => (i < proof?.steps.length)))])
-  //   }
-  // }, [proof])
-
-  // // save showed help in store
-  // useEffect(() => {
-  //   if (proof?.steps.length) {
-  //     console.debug(`showHelp:\n ${showHelp}`)
-  //     setHelp(Array.from(showHelp))
-  //   }
-  // }, [showHelp])
-
-  // Effect when command line mode gets enabled
-  useEffect(() => {
-    if (model && (typewriterMode)) {
-      // The typewriter shows one command per line: drop empty lines. Only edit if that
-      // changes something (an edit is a new version, which Lean then has to check again).
-      let code = model.getLinesContent().filter(line => line.trim())
-      const text = code.length ? code.join('\n') + '\n' : ''
-      if (model.getValue() !== text) {
-        editor?.executeEdits("typewriter", [{
-          range: model.getFullModelRange(),
-          text,
-          forceMoveMarkers: true
-        }]);
-      }
-
-      // let endPos = editor.getModel().getFullModelRange().getEndPosition()
-      // if (editor.getModel().getLineContent(endPos.lineNumber).trim() !== "") {
-      //   editor.executeEdits("typewriter", [{
-      //     range: monaco.Selection.fromPositions(endPos, endPos),
-      //     text: "\n",
-      //     forceMoveMarkers: true
-      //   }]);
-      // }
-      // let endPos = editor.getModel().getFullModelRange().getEndPosition()
-      // let currPos = editor.getPosition()
-      // if (currPos.column != 1 || (currPos.lineNumber != endPos.lineNumber && currPos.lineNumber != endPos.lineNumber - 1)) {
-      //   // This is not a position that would naturally occur from Typewriter, reset:
-      //   editor.setSelection(monaco.Selection.fromPositions(endPos, endPos))
-      // }
-    }
-  }, [editor, typewriterMode, lockEditorMode]) // TODO: typewriterMode too?
+  const levelTitle = (mobile ? "" : t("Level")) + ` ${levelId} / ${worldId ? gameInfo?.worldSize?.[worldId] ?? "" : ""}` +
+    (levelInfo?.title ? ` : ${gT(levelInfo.title)}` : "")
 
   return <>
     { levelInfoIsLoading && <div className="app-content loading"><CircularProgress /></div>}
     <LevelAppBar
       pageNumber={pageNumber} setPageNumber={setPageNumber}
       isLoading={levelInfoIsLoading}
-      levelTitle={(mobile ? "" : t("Level")) + ` ${levelId} / ${worldId ? gameInfo?.worldSize?.[worldId] ?? "" : ""}` +
-        (levelInfo?.title ? ` : ${gT(levelInfo.title)}` : "")}
+      levelTitle={levelTitle}
       />
     {mobile?
-      // TODO: This is copied from the `Split` component below...
-      <>
-        <div className={`app-content level-mobile ${levelInfoIsLoading ? 'hidden' : ''}`}>
-          <div className="mobile-page-switch" role="tablist">
-            <button role="tab" aria-selected={pageNumber == 0} className={pageNumber == 0 ? "active" : ""}
-              onClick={() => setPageNumber(0)}>{t("Proof")}</button>
-            <button role="tab" aria-selected={pageNumber == 1} className={pageNumber == 1 ? "active" : ""}
-              onClick={() => setPageNumber(1)}>{t("Inventory")}</button>
-          </div>
-          <ExercisePanel codeviewRef={codeviewRef} visible={pageNumber == 0} />
-          <InventoryPanel visible={pageNumber == 1} />
+      <div className={`app-content level-mobile ${levelInfoIsLoading ? 'hidden' : ''}`}>
+        <div className="mobile-page-switch" role="tablist">
+          <button role="tab" aria-selected={pageNumber == 0} className={pageNumber == 0 ? "active" : ""}
+            onClick={() => setPageNumber(0)}>{t("Proof")}</button>
+          <button role="tab" aria-selected={pageNumber == 1} className={pageNumber == 1 ? "active" : ""}
+            onClick={() => setPageNumber(1)}>{t("Inventory")}</button>
         </div>
-      </>
+        <ExercisePanel codeviewRef={codeviewRef} visible={pageNumber == 0} />
+        <InventoryPanel visible={pageNumber == 1} />
+      </div>
     :
       <Split minSize={0} snapOffset={200} sizes={[25, 50, 25]} className={`app-content level ${levelInfoIsLoading ? 'hidden' : ''}`}>
         <ChatPanel lastLevel={lastLevel}/>

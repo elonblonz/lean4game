@@ -5,10 +5,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { useAtom } from "jotai";
 import * as monaco from 'monaco-editor'
-import { typewriterContentAtom, codeAtom, appendCodeLineAtom, lastProofStepErrorCommandAtom, proofAtom, proofPendingAtom } from "../../../store/editor-atoms";
+import { codeAtom, appendCodeLineAtom, lastProofStepErrorCommandAtom, proofAtom, proofPendingAtom } from "../../../store/proof-atoms";
 import { twMerge } from "tailwind-merge";
 import { deletedChatAtom } from "../../../store/chat-atoms";
-import { oneLineEditorAtom } from "./typewriter-atoms";
+import { oneLineEditorAtom, typewriterContentAtom } from "../../../store/typewriter-atoms";
 import { darkModeAtom } from "../../../store/preferences-atoms";
 
 /** The input field */

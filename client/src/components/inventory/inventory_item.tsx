@@ -6,8 +6,6 @@ import { InventoryTile } from "../../api/game-data"
 import { useAtom } from "jotai"
 import { selectedDocTileAtom } from "../../store/inventory-atoms"
 import { levelIdAtom } from "../../store/location-atoms"
-import { typewriterAtom, typewriterContentAtom } from "../../store/editor-atoms"
-import { preferencesAtom } from "../../store/preferences-atoms"
 import { useAppendTypewriterInput } from "../editor/typewriter/useAppendTypewriterInput"
 
 export function InventoryItem({tile, isTheorem, recent=false, enableAll=false} : {
@@ -19,9 +17,6 @@ export function InventoryItem({tile, isTheorem, recent=false, enableAll=false} :
   const { t } = useTranslation()
   const [, setDoc] = useAtom(selectedDocTileAtom)
   const [levelId] = useAtom(levelIdAtom)
-  const [typewriterContent,] = useAtom(typewriterContentAtom)
-  const [, setTypewriter] = useAtom(typewriterAtom)
-  const [{ isSuggestionsMobileMode }] = useAtom(preferencesAtom)
 
   const insertable: boolean = (levelId ?? 0) > 0 && (enableAll || !(tile.locked || tile.disabled))
 
@@ -40,14 +35,13 @@ export function InventoryItem({tile, isTheorem, recent=false, enableAll=false} :
   const handleClick = (ev: any) => {setDoc(tile)}
 
   const insertItemName = (ev: any) => {
-    // navigator.clipboard.writeText(tile.displayName)
-    appendTypewriterInput(ev.shiftKey, tile.displayName, isTheorem, false)
-    setInserted(true)
+    ev.stopPropagation()
+    if (!appendTypewriterInput(ev.shiftKey, tile.displayName, isTheorem, false)) return
     // Show "inserted" for a moment.
+    setInserted(true)
     setTimeout(() => {
       setInserted(false)
     }, 3000);
-    ev.stopPropagation()
   }
 
 return <div className={`item ${className}${enableAll ? ' enabled' : ''}${recent ? ' recent' : ''}`} onClick={handleClick} title={title}>

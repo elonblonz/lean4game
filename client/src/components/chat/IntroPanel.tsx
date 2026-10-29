@@ -26,7 +26,7 @@ export function IntroPanel() {
 
   let text: Array<string> = gT(gameInfo?.worlds?.nodes[worldId ?? ""]?.introduction ?? "").split(/\n(\s*\n)+/)
 
-  const focusRef = useRef<HTMLButtonElement>()
+  const focusRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
    focusRef.current?.focus()
   }, [])

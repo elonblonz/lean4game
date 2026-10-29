@@ -24,7 +24,7 @@ import "./css/modern.css"
 
 import i18n from './i18n';
 import { Popup } from './components/popup/popup';
-import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/editor-atoms';
+import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/lean-atoms';
 import { LeanMonaco } from 'lean4monaco';
 import * as monaco from 'monaco-editor';
 import { darkModeAtom, preferencesAtom } from './store/preferences-atoms';

@@ -1,5 +1,6 @@
 import { useAtom } from "jotai"
-import { leanMonacoAtom, typewriterModeAtom } from "../../store/editor-atoms"
+import { leanMonacoAtom } from "../../store/lean-atoms"
+import { typewriterModeAtom } from "../../store/proof-atoms"
 import React, { useEffect, useLayoutEffect, useRef } from "react"
 import { ExerciseStatement } from "./ExerciseStatement"
 import { Typewriter } from "./typewriter/Typewriter"
@@ -8,7 +9,7 @@ import { Typewriter } from "./typewriter/Typewriter"
  * Note: It is important that the `div` with `codeViewRef` is
  * always present, or the monaco editor cannot start.
  */
-export function GameEditor({ codeviewRef } : { codeviewRef: React.MutableRefObject<HTMLDivElement> }) {
+export function GameEditor({ codeviewRef } : { codeviewRef: React.RefObject<HTMLDivElement> }) {
   const infoviewRef = useRef<HTMLDivElement>(null)
   const [leanMonaco] = useAtom(leanMonacoAtom)
   const [typewriterMode] = useAtom(typewriterModeAtom)

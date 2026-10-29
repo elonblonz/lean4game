@@ -2,279 +2,16 @@
  * @fileOverview Define the menu displayed with the tree of worlds on the welcome page
 */
 import * as React from 'react'
-import { Slider } from '@mui/material'
-import cytoscape, { LayoutOptions } from 'cytoscape'
-import klay from 'cytoscape-klay'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faXmark, faCircleQuestion } from '@fortawesome/free-solid-svg-icons'
 import '../css/world_tree.css'
-import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
-import { popupAtom, PopupType } from '../store/popup-atoms'
-import { useGameTranslation } from '../utils/translation'
-import { gameIdAtom, navigateAcrossWorldsAtom } from '../store/location-atoms'
-import { difficultyAtom } from '../store/progress-atoms'
+import { gameIdAtom } from '../store/location-atoms'
 import { gameInfoAtom } from '../store/query-atoms'
 import { mobileAtom } from '../store/preferences-atoms'
-import { firstIncompleteLevelAtomFamily, levelCompletedAtomFamily, worldCompletedAtom, worldDependenciesCompletedAtomFamily, worldProgressAtomFamily } from '../store/world-tree-atoms'
+import { computeWorldLayout, ds, dsMobile, s, WorldLayout, worldTreePadding } from './world_tree/layout'
+import { LevelIcon, WorldIcon, WorldPath } from './world_tree/icons'
+import { WorldSelectionMenu } from './world_tree/menu'
 
-// Settings for the world tree
-cytoscape.use( klay )
-
-const r = 16              // radius of a level
-const s = 10              // global scale
-const lineWidth = 10      //
-const ds = .75  // scale the resulting svg image
-const dsMobile = 1.25  // larger on touch screens, so that level icons are big enough to tap
-
-const NMIN = 5   // min. worldsize
-const NLABEL = 8 // max. world size to display label below the world
-const NMAX = 16  // max. world size. Level icons start spiraling out if the world has more levels.
-const NSPIRAL = 12 // world size if NMAX has been passed and need to spiral.
-
-const MINFONT = 12
-
-// colours
-const grey = 'var(--clr-world-locked)'
-const lightgrey = 'var(--clr-level-locked)'
-const green = 'var(--clr-world-completed)' // 118a11?
-const lightgreen = 'var(--clr-level-completed)'
-const blue = 'var(--clr-world-unlocked)'
-const darkgrey = 'var(--clr-world-label-locked)'
-const darkgreen = 'var(--clr-world-label-completed)'
-const darkblue = 'var(--clr-world-label-unlocked)'
-
-
-/** svg object for a level in the game tree */
-export function LevelIcon({ world, level, position }:
-  { world: string,
-    level: number,
-    position: cytoscape.Position,
-  }) {
-  const { t } = useTranslation()
-  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
-  const [difficulty] = useAtom(difficultyAtom)
-  const [levelUnlocked] = useAtom(levelCompletedAtomFamily(`${world}:${level-1}`))
-  const [worldUnlocked] = useAtom(worldDependenciesCompletedAtomFamily(world))
-  const [worldProgress] = useAtom(worldProgressAtomFamily(world))
-  const [completed] = useAtom(levelCompletedAtomFamily(`${world}:${level}`))
-
-  const unlocked = level <= 1 ? worldUnlocked && levelUnlocked : levelUnlocked
-  const levelDisabled = (difficulty >= 2 && !(unlocked || completed))
-  const [, navigateAcrossWorlds] = useAtom(navigateAcrossWorldsAtom)
-
-  const N = Math.max(gameInfo?.worldSize?.[world] ?? NMIN, NMIN)
-
-  // divide circle into `N+2` equal pieces.
-  // only for non-spiraling case
-  const beta = 2 * Math.PI / Math.min(N+2, ((N < (NMAX+1) ? NMAX : NSPIRAL)+1))
-
-  // We want distance between two level icons to be `2.2*r`, therefore:
-  // Sinus-Satz: (1.1*r) / sin(β/2) = R / sin(π/2)
-  let R = 1.1 * r / Math.sin(beta/2)
-
-  /** In the spiral, the angle `β` should decrease to avoid big gaps between levels.
-   * This is a simplified function, which has little mathematical foundation, but
-   * works fine in tests up to `N=30`.
-   */
-  function betaSpiral(level: number) {
-    return 2 * Math.PI / ((NSPIRAL+1) + 2 * Math.max(0, (level-2)) / (NSPIRAL+1))
-  }
-
-  const x = N < (NMAX+1) ?
-    // normal case
-    s * position.x + Math.sin(level * beta) * R :
-    // spiraling case
-    s * position.x + Math.sin(level * betaSpiral(level)) * (R + 2*r*(level-1)/(NSPIRAL+1))
-  const y = N < (NMAX+1) ?
-    // normal case
-    s * position.y - Math.cos(level * beta) * R :
-    // spiraling case
-    s * position.y - Math.cos(level * betaSpiral(level)) * (R + 2*r*(level-1)/(NSPIRAL+1))
-
-  // Show world intro if it hasn't been read so far
-  let targetLevel = level
-  if (level <= 1) {
-    targetLevel = (worldProgress?.readIntro) ? 1 : 0
-  }
-
-  return (
-    <a onClick={() => {if (!levelDisabled) navigateAcrossWorlds(world, targetLevel)}}
-        {...mapIconProps(`${t("Level")} ${level}`, levelDisabled, () => navigateAcrossWorlds(world, targetLevel))}
-        className={`level${levelDisabled ? ' disabled' : ''}`}>
-      <circle style={{fill: completed ? lightgreen : unlocked? blue : lightgrey}} cx={x} cy={y} r={r} />
-      <foreignObject className="level-title-wrapper" x={x} y={y}
-          width={1.42*r} height={1.42*r} transform={"translate("+ -.71*r +","+ -.71*r +")"}>
-        <div>
-          <p className="level-title" style={{fontSize: Math.floor(r) + "px"}}>
-            {level}
-          </p>
-        </div>
-      </foreignObject>
-    </a>
-  )
-
-}
-
-/** svg object of one world in the game tree */
-export function WorldIcon({world, title, position}:
-  { world: string,
-    title: string,
-    position: cytoscape.Position,
-  }) {
-  const { t : gT } = useGameTranslation()
-  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
-  const [difficulty] = useAtom(difficultyAtom)
-  const [unlocked] = useAtom(worldDependenciesCompletedAtomFamily(world))
-  const [completed] = useAtom(worldCompletedAtom(world))
-  const worldDisabled = (difficulty >= 2 && !(unlocked || completed))
-  const [firstUncompleted] = useAtom(firstIncompleteLevelAtomFamily(world))
-  const [, navigateAcrossWorlds] = useAtom(navigateAcrossWorldsAtom)
-
-  // See level icons. Match radius computed there minus `1.2*r`
-  const N = Math.max(gameInfo?.worldSize?.[world] ?? NMIN, NMIN)
-  const betaHalf = Math.PI / Math.min(N+2, ((N < (NMAX+1) ? NMAX : NSPIRAL) + 1))
-  let R = 1.1 * r / Math.sin(betaHalf) - 1.2 * r
-
-  let fontSize = Math.floor(R/4)
-
-  // Offset for the labels for small worlds
-  let labelOffset = R + 2.5 * r
-
-  return <a
-      onClick={() => {if (!worldDisabled) navigateAcrossWorlds(world, firstUncompleted)}}
-      {...mapIconProps(title ? gT(title) : world, worldDisabled, () => navigateAcrossWorlds(world, firstUncompleted))}
-      className={`world${worldDisabled ? ' disabled' : ''}`}>
-    <circle className="world-circle" cx={s*position.x} cy={s*position.y} r={R}
-        style={{fill: completed ? green : unlocked ? blue : grey}}/>
-    { false ? // fontSize >= MINFONT ?
-      // NOTE: This code would display the world names inside the bubble, but currently
-      //       it isn't used.
-      // Label for large worlds
-      <foreignObject className="world-title-wrapper" x={s*position.x} y={s*position.y}
-          width={1.42*R} height={1.42*R} transform={"translate("+ -.71*R +","+ -.71*R +")"}>
-        <div className={unlocked && !completed ? "playable-world" : ''}>
-          <p className="world-title" style={{fontSize: fontSize + "px"}}>
-            {title ? gT(title) : world}
-          </p>
-        </div>
-      </foreignObject>
-      :
-      // Label for small worlds
-      <foreignObject x={s*position.x - 75} y={s*position.y + labelOffset}
-          width='150px' height='2em' style={{overflow: 'visible'}}
-          >
-        {/* `playable-world`: the map scrolls to the first such world (see `WorldTreePanel`). */}
-        <div className={`world-label${unlocked && !completed ? ' playable-world' : ''}`} style={{backgroundColor: completed ? darkgreen : unlocked ? darkblue : darkgrey}}>
-          <p className='world-title' style={{fontSize: MINFONT + "px"}}>
-            {title ? gT(title) : world}
-          </p>
-        </div>
-      </foreignObject>}
-  </a>
-}
-
-/** svg object for a connection path between worlds in the game tree */
-export function WorldPath({source, target, sourceWorld} : {source: any, target: any, sourceWorld: string}) {
-  const [ sourceCompleted ] = useAtom(worldCompletedAtom(sourceWorld))
-  return <line x1={s*source.position.x} y1={s*source.position.y}
-          x2={s*target.position.x} y2={s*target.position.y}
-          style={{stroke: sourceCompleted ? green : grey}} strokeWidth={lineWidth} />
-}
-
-/** Props that make a map icon usable with the keyboard: focusable unless disabled, opened with
- * Enter or Space, and named for screen readers. */
-function mapIconProps(label: string, disabled: boolean, open: () => void) {
-  return {
-    role: "button",
-    tabIndex: disabled ? -1 : 0,
-    "aria-label": label,
-    "aria-disabled": disabled,
-    onKeyDown: (ev: React.KeyboardEvent) => {
-      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); if (!disabled) open() }
-    },
-  }
-}
-
-/** The menu that is shown next to the world selection graph */
-export function WorldSelectionMenu() {
-  const { t, i18n } = useTranslation()
-  const [gameId] = useAtom(gameIdAtom)
-  const [difficulty, setDifficulty] = useAtom(difficultyAtom)
-  const [mobile] = useAtom(mobileAtom)
-  const [popup, setPopup] = useAtom(popupAtom)
-
-  function label(x : number) {
-    return x == 0 ? t("none") : x == 1 ? t("relaxed") : t("regular")
-  }
-
-
-  return <nav className={`world-selection-menu${mobile ? '' : ' desktop'}`}>
-    <div className="slider-wrap">
-      <span className="difficulty-label">
-        {t("Rules")}
-        <FontAwesomeIcon
-          onClick={() => {setPopup(PopupType.rules)}}
-          icon={(popup == PopupType.rules) ? faXmark : faCircleQuestion}
-          className='helpButton' />
-      </span>
-      <Slider
-        orientation={mobile ? "horizontal" : "vertical"}
-        title={t("Game Rules")}
-        min={0} max={2}
-        aria-label={t("Game Rules")}
-        value={difficulty}
-        marks={[
-          {value: 0, label: label(0)},
-          {value: 1, label: label(1)},
-          {value: 2, label: label(2)}
-        ]}
-        valueLabelFormat={label}
-        getAriaValueText={label}
-        valueLabelDisplay="off"
-        onChange={(ev, val) => {
-          setDifficulty(Array.isArray(val) ? val[0]: val)
-        }}
-        ></Slider>
-    </div>
-  </nav>
-}
-
-export function computeWorldLayout(worlds: {nodes: {[id:string]: {id: string, title: string, introduction: string, image: string}}, edges: string[][]}) {
-  let elements = []
-  for (let id in worlds.nodes) {
-    elements.push({ data: { id: id, title: worlds.nodes[id].title } })
-  }
-  for (let edge of worlds.edges) {
-    elements.push({
-      data: {
-        id: edge[0] + " --edge-to--> " + edge[1],
-        source: edge[0],
-        target: edge[1]
-      }
-    })
-  }
-  const cy = cytoscape({
-    container: null,
-    elements,
-    headless: true,
-    styleEnabled: false
-  })
-
-  cy.layout({name: "klay", klay: {direction: "DOWN", nodePlacement: "LINEAR_SEGMENTS"}} as LayoutOptions).run()
-
-  let nodes = {}
-  cy.nodes().forEach((node, id) => {
-    nodes[node.id()] = {
-      position: node.position(),
-      data: node.data()
-    }
-  })
-  const bounds = cy.nodes().boundingBox()
-  return { nodes, bounds }
-}
-
-
+/** The world map: the worlds, their levels, and the menu with the rules setting */
 export function WorldTreePanel() {
   const [gameId] = useAtom(gameIdAtom)
   const [mobile] = useAtom(mobileAtom)
@@ -283,7 +20,7 @@ export function WorldTreePanel() {
   const worlds = gameInfo?.worlds
   const worldSize = gameInfo?.worldSize
 
-  const {nodes, bounds}: any = worlds ? computeWorldLayout(worlds) : {nodes: []}
+  const {nodes, bounds}: WorldLayout = React.useMemo(() => worlds ? computeWorldLayout(worlds) : {nodes: {}}, [worlds])
 
   // scroll to playable world
   React.useEffect(() => {
@@ -308,7 +45,7 @@ export function WorldTreePanel() {
     }
   }, [worlds, worldSize])
 
-  let svgElements = []
+  let svgElements: React.ReactNode[] = []
   if (worlds && worldSize) {
 
     // draw all connecting paths
@@ -345,10 +82,7 @@ export function WorldTreePanel() {
     }
   }
 
-  // See `LevelIcon` for calculation of the radius. Use the max. radius for calculating the padding
-  // TODO: Is there a way to determine padding according to the drawn objects?
-  let R = 1.1 * r / Math.sin(Math.PI / (NMAX+1))
-  const padding = R + 2.1*r
+  const padding = worldTreePadding()
 
   let dx = bounds ? s*(bounds.x2 - bounds.x1) + 2*padding : 100
 

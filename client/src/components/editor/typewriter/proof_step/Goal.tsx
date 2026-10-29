@@ -1,12 +1,12 @@
 import { useAtom } from "jotai";
 import React from "react";
-import { typewriterModeAtom } from "../../../../store/editor-atoms";
+import { typewriterModeAtom } from "../../../../store/proof-atoms";
 import { gameInfoAtom } from "../../../../store/query-atoms";
 import { mobileAtom } from "../../../../store/preferences-atoms";
 import { useTranslation } from "react-i18next";
-import { InteractiveGoal, ProofState } from "../../../../api/rpc_api";
+import { GameHypothesisBundle, InteractiveGoal } from "../../../../api/rpc_api";
 import { Hyp } from "./Hyp";
-import { InteractiveHypothesisBundle, TaggedText_stripTags } from "@leanprover/infoview-api";
+import { TaggedText_stripTags } from "@leanprover/infoview-api";
 
 
 export function Goal({goal} : { goal: InteractiveGoal}) {
@@ -15,14 +15,15 @@ export function Goal({goal} : { goal: InteractiveGoal}) {
   const [typewriterMode] = useAtom(typewriterModeAtom)
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
 
-  function unbundleHyps (hyps: InteractiveHypothesisBundle[]) : InteractiveHypothesisBundle[] {
+  function unbundleHyps (hyps: GameHypothesisBundle[]) : GameHypothesisBundle[] {
     return hyps.flatMap(hyp => (
         gameInfo?.settings?.unbundleHyps ? hyp.names.map(name => {return {...hyp, names: [name]}}) : [hyp]
     ))
   }
 
-  const objectHyps = unbundleHyps(goal.hyps.filter(hyp => !(hyp as any).isAssumption))
-  const assumptionHyps = unbundleHyps(goal.hyps.filter(hyp => (hyp as any).isAssumption))
+  const hyps: GameHypothesisBundle[] = goal.hyps
+  const objectHyps = unbundleHyps(hyps.filter(hyp => !hyp.isAssumption))
+  const assumptionHyps = unbundleHyps(hyps.filter(hyp => hyp.isAssumption))
 
   return (
     <>

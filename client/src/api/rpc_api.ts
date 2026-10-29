@@ -1,4 +1,4 @@
-import { CodeWithInfos, ContextInfo, FVarId, InteractiveDiagnostic, InteractiveGoalCore, MVarId, TermInfo } from '@leanprover/infoview-api'
+import { InteractiveDiagnostic, InteractiveGoalCore, InteractiveHypothesisBundle, MVarId, TermInfo } from '@leanprover/infoview-api'
 
 
 
@@ -8,6 +8,12 @@ export interface InteractiveGoal extends InteractiveGoalCore {
   mvarId?: MVarId;
   isInserted?: boolean;
   isRemoved?: boolean;
+}
+
+/** A hypothesis as the game server sends it: it also tells whether the hypothesis is an
+ * assumption (a proof of a proposition, like `h : x = 2`) or an object (like `x : ℕ`). */
+export interface GameHypothesisBundle extends InteractiveHypothesisBundle {
+  isAssumption?: boolean;
 }
 
 export interface InteractiveGoals extends InteractiveGoalCore {

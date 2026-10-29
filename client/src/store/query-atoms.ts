@@ -35,3 +35,11 @@ export const levelInfoAtom = atomWithQuery<LevelInfo>((get) => {
     },
   }
 })
+
+/** Whether the current level is the last one of its world */
+export const isLastLevelAtom = atom(get => {
+  const worldId = get(worldIdAtom)
+  const levelId = get(levelIdAtom)
+  const { data: gameInfo } = get(gameInfoAtom)
+  return !!worldId && levelId !== undefined && levelId >= (gameInfo?.worldSize?.[worldId] ?? 0)
+})

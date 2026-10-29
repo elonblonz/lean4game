@@ -4,38 +4,21 @@ import { Button } from "./button";
 import { useGameTranslation } from "../utils/translation";
 import { useTranslation } from "react-i18next";
 import { useAtom } from "jotai";
-import { gameIdAtom } from "../store/location-atoms";
-import { deletedChatAtom, helpAtom } from "../store/chat-atoms";
-import { proofAtom } from "../store/editor-atoms";
-import { GameHint, InteractiveGoalsWithHints } from './infoview/types';
-import { ProofState } from '../api/rpc_api';
-import { DiagnosticSeverity } from 'vscode-languageserver-types';
-
-/** Whether the proof's last step has errors: it is then the failed command, which is replaced
- * by the next one, so its hints are not shown and help applies to the step before it. */
-export function lastStepHasErrors(proof: ProofState | null | undefined): boolean {
-  if (!proof?.steps.length) return false
-  const diags = [...proof.steps[proof.steps.length - 1].diags, ...proof.diagnostics]
-  return diags.some(d => d.severity == DiagnosticSeverity.Error)
-}
-
-/** Whether step `i` is the proof's failed last command. */
-export function isLastStepWithErrors(proof: ProofState | null | undefined, i: number): boolean {
-  return !!proof && i == proof.steps.length - 1 && lastStepHasErrors(proof)
-}
-
+import { helpAtom } from "../store/chat-atoms";
+import { proofAtom } from "../store/proof-atoms";
+import { GameHint } from '../api/rpc_api';
+import { hasHiddenHints, lastValidStep } from '../utils/proof';
 
 /** Plug-in the variable names in a hint. We do this client-side to prepare
  * for i18n in the future. i.e. one should be able translate the `rawText`
  * and have the variables substituted just before displaying.
  */
-function getHintText(hint: GameHint): string {
-  const [gameId] = useAtom(gameIdAtom)
+function useHintText(hint: GameHint): string {
   let { t: gT } = useGameTranslation()
   if (hint.rawText) {
     // Replace the variable names used in the hint with the ones used by the player
     // variable names are marked like `«{g}»` inside the text.
-    return gT(hint.rawText).replaceAll(/«\{(.*?)\}»/g, ((_, v) =>
+    return gT(hint.rawText).replaceAll(/«\{(.*?)\}»/g, ((_: string, v: string) =>
       // `hint.varNames` contains tuples `[oldName, newName]`
       (hint.varNames.find(x => x[0] == v))?.[1] ?? ""))
   } else {
@@ -47,13 +30,13 @@ function getHintText(hint: GameHint): string {
 
 export function Hint({hint, step, selected, toggleSelection, lastLevel} : {hint: GameHint, step: number, selected?: number, toggleSelection: any, lastLevel?: boolean}) {
   return <div className={`message information step-${step}` + (step == selected ? ' selected' : '') + (lastLevel ? ' recent' : '')} onClick={toggleSelection}>
-    <Markdown>{getHintText(hint)}</Markdown>
+    <Markdown>{useHintText(hint)}</Markdown>
   </div>
 }
 
 export function HiddenHint({hint, step, selected, toggleSelection, lastLevel} : {hint: GameHint, step: number, selected?: number, toggleSelection: any, lastLevel?: boolean}) {
   return <div className={`message warning step-${step}` + (step == selected ? ' selected' : '') + (lastLevel ? ' recent' : '')} onClick={toggleSelection}>
-    <Markdown>{getHintText(hint)}</Markdown>
+    <Markdown>{useHintText(hint)}</Markdown>
   </div>
 }
 
@@ -71,7 +54,7 @@ export function Hints({hints, showHidden, step, selected, toggleSelection, lastL
 
 export function DeletedHint({hint} : {hint: GameHint}) {
   return <div className="message information deleted-hint">
-    <Markdown>{getHintText(hint)}</Markdown>
+    <Markdown>{useHintText(hint)}</Markdown>
   </div>
 }
 
@@ -87,38 +70,14 @@ export function DeletedHints({hints} : {hints: GameHint[]}) {
   </>
 }
 
-/** Filter hints to not show consequtive identical hints twice.
- * Hidden hints are not filtered.
- */
-export function filterHints(hints: GameHint[], prevHints: GameHint[]): GameHint[] {
-  if (!hints) {
-    return []}
-  else if (!prevHints) {
-    return hints }
-  else {
-    return hints.filter((hint) => hint.hidden ||
-    (prevHints.find(x => (x.text == hint.text && x.hidden == hint.hidden)) === undefined)
-    )
-  }
-}
-
-
-function hasHiddenHints(step?: InteractiveGoalsWithHints): boolean {
-  return step !== undefined && step.goals[0]?.hints.some((hint) => hint.hidden)
-}
-
-
 export function MoreHelpButton({selected=null} : {selected: number | null}) {
 
   const { t } = useTranslation()
   const [help, setHelp] = useAtom(helpAtom)
 
-  const [proof, setProof] = useAtom(proofAtom)
-  const [deletedChat, setDeletedChat] = useAtom(deletedChatAtom)
+  const [proof] = useAtom(proofAtom)
 
-  let k = proof?.steps.length ?
-    ((selected === null) ? (proof?.steps.length - (lastStepHasErrors(proof) ? 2 : 1)) : selected)
-    : 0
+  let k = proof?.steps.length ? (selected ?? lastValidStep(proof)) : 0
 
   const activateHiddenHints = (ev: any) => {
     // If the last step (`k`) has errors, we want the hidden hints from the
@@ -141,4 +100,5 @@ export function MoreHelpButton({selected=null} : {selected: number | null}) {
       {t("Show more help!")}
     </Button>
   }
+  return null
 }

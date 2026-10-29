@@ -8,7 +8,8 @@ import '../css/landing_page.css'
 import bgImage from '../assets/bg.jpg'
 import { Markdown } from './markdown';
 import path from 'path';
-import { ImpressumButton, LanguageButton, LanguageDropdown, MenuButton, PreferencesButton, PrivacyButton } from './app_bar';
+import { ImpressumButton, MenuButton, PreferencesButton, PrivacyButton } from './navigation/menu_buttons';
+import { LanguageButton, LanguageDropdown } from './navigation/language';
 import ReactCountryFlag from 'react-country-flag';
 import lean4gameConfig from '../config.json'
 import i18next from 'i18next';

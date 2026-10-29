@@ -1,12 +1,10 @@
 import { useTranslation } from "react-i18next"
-import { GameHint, ProofState } from "../../../../api/rpc_api"
+import { ProofState } from "../../../../api/rpc_api"
 import React from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faDeleteLeft } from "@fortawesome/free-solid-svg-icons"
-import { filterHints } from "../../../hints"
 import { useAtom } from "jotai"
-import { editor } from 'monaco-editor'
-import { deleteProofFromStepAtom, lastProofStepHasErrorsAtom } from "../../../../store/editor-atoms"
+import { deleteProofFromStepAtom, lastProofStepHasErrorsAtom } from "../../../../store/proof-atoms"
 import { Button } from "../../../button"
 
 /** The display of a single entered lean command */

@@ -1,18 +1,17 @@
 import React from "react";
-import { editor } from 'monaco-editor'
 import { InteractiveGoalsWithHints } from "../../../../api/rpc_api";
 import { useAtom } from "jotai";
 import { helpAtom, selectedStepAtom } from "../../../../store/chat-atoms";
 import { twMerge } from "tailwind-merge";
 import { Command } from "./Command";
-import { proofAtom } from "../../../../store/editor-atoms";
+import { proofAtom } from "../../../../store/proof-atoms";
 import { Errors } from "../../messages/Error";
 import { mobileAtom } from "../../../../store/preferences-atoms";
 import { gameInfoAtom, levelInfoAtom } from "../../../../store/query-atoms";
 import { useGameTranslation } from "../../../../utils/translation";
-import { filterHints, Hint, Hints } from "../../../hints";
+import { Hint, Hints } from "../../../hints";
+import { stepHints } from "../../../../utils/proof";
 import { GoalsTabs } from "./GoalsTab";
-import { GameHint } from "../../types";
 
 export function ProofStep({step, idx}: {step:InteractiveGoalsWithHints, idx: number}) {
   const {t : gT} = useGameTranslation()
@@ -24,15 +23,16 @@ export function ProofStep({step, idx}: {step:InteractiveGoalsWithHints, idx: num
   const [{ data: levelInfo }] = useAtom(levelInfoAtom)
   let introText: Array<string> = gT(levelInfo?.introduction ?? "").split(/\n(\s*\n)+/)
 
+  /** Click handler selecting (or unselecting) the step `line`. */
   function toggleSelectStep(line: number) {
-    if (mobile) {return}
-    setSelectedStep(selectedStep != line ? line : undefined)
+    return () => {
+      if (mobile) {return}
+      setSelectedStep(selectedStep != line ? line : undefined)
+    }
   }
 
-  // TODO: this should be an atom
-  let filteredHints: GameHint[] = proof ? filterHints(step.goals[0]?.hints, proof.steps[idx-1]?.goals[0]?.hints) : []
-
-  if (!proof) return
+  if (!proof) return null
+  const filteredHints = stepHints(proof, idx)
 
   return (
     <div key={`proof-step-${idx}`} className={twMerge("step",  `step-${idx}`, (selectedStep == idx && ' selected'))}>

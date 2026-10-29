@@ -3,9 +3,8 @@ import { useEffect, useRef } from 'react'
 import { useAtom } from 'jotai'
 import { Markdown } from '../markdown'
 import { useGameTranslation } from '../../utils/translation'
-import { levelIdAtom, worldIdAtom } from '../../store/location-atoms'
-import { gameInfoAtom, levelInfoAtom } from '../../store/query-atoms'
-import { proofAtom } from '../../store/editor-atoms'
+import { isLastLevelAtom, levelInfoAtom } from '../../store/query-atoms'
+import { proofAtom } from '../../store/proof-atoms'
 import { MoreHelpButton } from '../hints'
 import { NextLevelButton } from './ChatPanel'
 
@@ -16,12 +15,9 @@ import { NextLevelButton } from './ChatPanel'
  */
 export function MobileLevelFooter() {
   const { t: gT } = useGameTranslation()
-  const [worldId] = useAtom(worldIdAtom)
-  const [levelId] = useAtom(levelIdAtom)
-  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   const [{ data: levelInfo }] = useAtom(levelInfoAtom)
   const [proof] = useAtom(proofAtom)
-  const lastLevel = !!worldId && levelId !== undefined && levelId >= (gameInfo?.worldSize?.[worldId] ?? 0)
+  const [lastLevel] = useAtom(isLastLevelAtom)
 
   const focusRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
