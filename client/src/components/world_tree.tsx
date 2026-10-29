@@ -182,26 +182,6 @@ export function WorldPath({source, target, sourceWorld} : {source: any, target: 
           style={{stroke: sourceCompleted ? green : grey}} strokeWidth={lineWidth} />
 }
 
-/** Download a file containing `data` */
-export const downloadFile = ({ data, fileName, fileType } :
-  { data: string
-    fileName: string
-    fileType: string}) => {
-  const blob = new Blob([data], { type: fileType })
-  const a = document.createElement('a')
-  a.download = fileName
-  a.href = window.URL.createObjectURL(blob)
-  const clickEvt = new MouseEvent('click', {
-    view: window,
-    bubbles: true,
-    cancelable: true,
-  })
-  a.dispatchEvent(clickEvt)
-  a.remove()
-  // Free the file once the browser has taken it.
-  setTimeout(() => window.URL.revokeObjectURL(a.href), 10_000)
-}
-
 /** Props that make a map icon usable with the keyboard: focusable unless disabled, opened with
  * Enter or Space, and named for screen readers. */
 function mapIconProps(label: string, disabled: boolean, open: () => void) {

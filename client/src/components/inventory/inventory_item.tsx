@@ -2,7 +2,7 @@ import { faBan, faCheck, faClipboard, faLock, faReply } from "@fortawesome/free-
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import React, { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { InventoryTile } from "../../store/api"
+import { InventoryTile } from "../../api/game-data"
 import { useAtom } from "jotai"
 import { selectedDocTileAtom } from "../../store/inventory-atoms"
 import { levelIdAtom } from "../../store/location-atoms"

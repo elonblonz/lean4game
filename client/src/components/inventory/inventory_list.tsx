@@ -1,5 +1,5 @@
 import React from "react"
-import { InventoryTile } from "../../store/api"
+import { InventoryTile } from "../../api/game-data"
 import { InventoryItem } from "./inventory_item"
 import { currentInventoryTilesAtom, inventoryAtom, InventoryTab } from "../../store/inventory-atoms"
 import { useAtom } from "jotai"

@@ -13,7 +13,6 @@
     "@fortawesome/react-fontawesome": "^3.2.0",
     "@leanprover/infoview-api": "^0.13.0",
     "@mui/material": "^5.11.1",
-    "@reduxjs/toolkit": "^1.9.1",
     "@tanstack/query-core": "^5.90.20",
     "cytoscape": "^3.23.0",
     "cytoscape-klay": "^3.1.4",
@@ -31,7 +30,6 @@
     "react-i18next": "^16.5.8",
     "react-markdown": "^10.1.0",
     "react-popper": "^2.3.0",
-    "react-redux": "^8.0.5",
     "react-split": "^2.0.14",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
@@ -39,7 +37,6 @@
   },
   "devDependencies": {
     "@codingame/esbuild-import-meta-url-plugin": "^1.0.3",
-    "@redux-devtools/core": "^3.13.1",
     "@types/cytoscape": "^3.19.9",
     "@vitejs/plugin-react-swc": "^4.2.3",
     "cross-env": "^10.1.0",

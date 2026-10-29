@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from '../markdown';
-import { GameTile } from '../../store/api'
+import { GameTile } from '../../api/game-data'
 import { Flag } from '../flag';
 import path from 'path';
 import { useAtom } from 'jotai';

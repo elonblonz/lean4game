@@ -1,8 +1,7 @@
 /**
- * @fileOverview Define API of the server-client communication
+ * @fileOverview The game data served by the relay as JSON (`/data/<game>/...`), which the
+ * query atoms in `store/query-atoms.ts` and `store/inventory-atoms.ts` fetch.
 */
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { InventoryTab } from './inventory-atoms'
 
 
 export interface GameTile {

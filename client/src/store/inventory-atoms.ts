@@ -1,5 +1,5 @@
 import { Atom, atom } from "jotai";
-import { Doc, InventoryOverview, InventoryTile } from "./api";
+import { Doc, InventoryOverview, InventoryTile } from "../api/game-data";
 import { gameIdAtom, levelIdAtom, worldIdAtom } from "./location-atoms";
 import { atomWithQuery } from "jotai-tanstack-query";
 import { progressAtom } from "./progress-atoms";

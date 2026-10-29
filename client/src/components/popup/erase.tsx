@@ -2,64 +2,15 @@
  * @fileOverview
 */
 import * as React from 'react'
-import { downloadFile } from '../world_tree'
+import { downloadProgress } from '../../utils/download'
 import { Button } from '../button'
 import { Trans, useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
 import { popupAtom } from '../../store/popup-atoms'
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../../store/location-atoms'
 import { levelProgressAtom, progressAtom, worldProgressAtom } from '../../store/progress-atoms'
-import { GameProgress } from '../../store/progress-types'
 
-/** download the current progress (i.e. what's saved in the browser store) */
-export function downloadProgress(gameId: string, gameProgress: GameProgress) {
-  downloadFile({
-    data: JSON.stringify(gameProgress, null, 2),
-    fileName: `lean4game-${gameId?.replaceAll('/', '-')}-${new Date().toISOString().slice(0, 10)}.json`,
-    fileType: 'application/json',
-  })
-}
-
-// /** Pop-up to delete game progress.
-//  *
-//  * `handleClose` is the function to close it again because it's open/closed state is
-//  * controlled by the containing element.
-//  */
-// export function ErasePopup ({handleClose}) {
-//   let { t } = useTranslation()
-//   const gameId = React.useContext(GameIdContext)
-//   const gameProgress = useSelector(selectProgress(gameId))
-//   const dispatch = useAppDispatch()
-
-//   const eraseProgress = () => {
-//     dispatch(deleteProgress({game: gameId}))
-//     handleClose()
-//   }
-
-//   const downloadAndErase = (ev) => {
-//     downloadProgress(gameId, gameProgress, ev)
-//     eraseProgress()
-//   }
-
-//   return <div className="modal-wrapper">
-//   <div className="modal-backdrop" onClick={handleClose} />
-//   <div className="modal">
-//     <div className="codicon codicon-close modal-close" onClick={handleClose}></div>
-//     <h2>{t("Delete Progress?")}</h2>
-//     <Trans>
-//       <p>Do you want to delete your saved progress irreversibly?</p>
-//       <p>
-//         (This deletes your proofs and your collected inventory.
-//         Saves from other games are not deleted.)
-//       </p>
-//     </Trans>
-//     <Button onClick={eraseProgress} >{t("Delete")}</Button>
-//     <Button onClick={downloadAndErase} >{t("Download & Delete")}</Button>
-//     <Button onClick={handleClose} >{t("Cancel")}</Button>
-//   </div>
-// </div>
-// }
-
+/** Pop-up to delete the progress of the current level, world or game. */
 export function ErasePopup () {
   let { t } = useTranslation()
   const [gameId, navigateToGame] = useAtom(gameIdAtom)
@@ -68,15 +19,11 @@ export function ErasePopup () {
   const [gameProgress, setGameProgress] = useAtom(progressAtom)
   const [worldProgress, setWorldProgress] = useAtom(worldProgressAtom)
   const [levelProgress, setLevelProgress] = useAtom(levelProgressAtom)
-
-  // const { setPage } = useContext(PageContext)
   const [, setPopup] = useAtom(popupAtom)
 
   const eraseProgress = () => {
     setGameProgress(null)
     setPopup(null)
-    // setPage(0) // TODO: fix me
-    // ev.preventDefault() // TODO: this is a hack to prevent the buttons below from opening a link
   }
 
   function eraseLevel () {

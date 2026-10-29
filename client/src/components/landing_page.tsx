@@ -20,7 +20,7 @@ import { gameIdAtom } from '../store/location-atoms';
 import { gameInfoAtomFamily } from '../store/query-atoms';
 import { preferencesAtom } from '../store/preferences-atoms';
 import { gameTilesAtom } from '../store/tiles-atoms';
-import { GameTileWithName } from '../store/api';
+import { GameTileWithName } from '../api/game-data';
 import { getGameI18n } from '../i18n';
 import { Announcements } from './announcements';
 

@@ -7,7 +7,7 @@ import { faDownload, faUpload, faEraser, faBook, faBookOpen, faGlobe, faHome,
   faArrowRight, faArrowLeft, faXmark, faBars, faCode,
   faCircleInfo, faTerminal, faGear } from '@fortawesome/free-solid-svg-icons'
 import { Button } from './button'
-import { downloadProgress } from './popup/erase'
+import { downloadProgress } from '../utils/download'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
 import { popupAtom, PopupType } from '../store/popup-atoms'
