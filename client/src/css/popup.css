@@ -130,3 +130,9 @@ button.modal-close {
   float: right;
   font-size: 1.5rem;
 }
+
+/* "My proofs": room for the numbered lines and their justifications. */
+.modal.modal-wide {
+  max-width: min(110ch, calc(100% - 3rem));
+  width: min(110ch, calc(100% - 3rem));
+}

@@ -89,3 +89,11 @@ test('games that are not listed reopen the document for each level', () => {
   assert.match(c.toServer[0].params.textDocument.text, /^import Game.Levels.W.L01 import GameServer.Runner/)
   assert.match(c.toServer[2].params.textDocument.text, /^import Game.Levels.W.L02 import GameServer.Runner/)
 })
+
+test('level documents named file:///levels/<world>.<level>.lean are understood', () => {
+  const c = connect(makeGame())
+  c.client({ jsonrpc: '2.0', method: 'textDocument/didOpen',
+    params: { textDocument: { uri: 'file:///levels/W.2.lean', languageId: 'lean4', version: 1, text: '' } } })
+  assert.equal(c.toServer.length, 1)
+  assert.match(c.toServer[0].params.textDocument.text, /Runner "TestGame" "W" 2 /)
+})

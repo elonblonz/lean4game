@@ -341,7 +341,18 @@ export class GameManager {
     const metadataUri = pathToFileURL(path.join(gameDir, 'Game', 'Metadata.lean')).href
     const stableHeader = session !== undefined && usesStableHeader(session.game) && usesLevelScope
 
-    /* The client has one document per level (`file:///<world>/<level>.lean`, see `level.tsx`),
+    /** The world and level of a client document: `file:///levels/<world>.<level>.lean`, or
+     * `file:///<world>/<level>.lean` as clients before 2026-10 named them. */
+    const parseLevelUri = (uri: string): { worldId: string, levelId: string } | undefined => {
+      const { dir, name } = path.posix.parse(new URL(uri).pathname)
+      const m = name.match(/^(.+)\.(\d+)$/)
+      if (dir === '/levels' && m) return { worldId: m[1], levelId: m[2] }
+      if (/^\d+$/.test(name)) return { worldId: path.posix.basename(dir), levelId: name }
+      return undefined
+    }
+
+    /* The client has one document per level (`file:///levels/<world>.<level>.lean`, see
+       `levelUriAtom`),
        and keeps the ones it has visited open. Lean gets a single document, `Metadata.lean`
        with the level's header in front of the proof, so only one level is open in Lean at a
        time. We keep the text of every level the client has open; when the client works on
@@ -370,9 +381,13 @@ export class GameManager {
     /** The message that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
     const openInServer = (uri: string): object | undefined => {
       const doc = clientDocs.get(uri)!
-      const pathParts = path.parse(new URL(uri).pathname)
-      worldId = path.basename(pathParts.dir)
-      levelId = pathParts.name
+      const level = parseLevelUri(uri)
+      if (!level) {
+        console.error(`[${new Date()}] Not a level: ${uri}`)
+        return undefined
+      }
+      worldId = level.worldId
+      levelId = level.levelId
       const levelDataPath = path.join(gameDir, '.lake', 'gamedata', `level__${worldId}__${levelId}.json`)
       if (!fs.existsSync(levelDataPath)) {
         console.error(`[${new Date()}] Missing level data: ${levelDataPath}`)

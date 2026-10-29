@@ -12,6 +12,7 @@ import { PreferencesPopup } from './preferences'
 import { ErasePopup } from './erase'
 import { RulesHelpPopup } from './rules_help'
 import { WorldRecapPopup } from '../learning/WorldRecap'
+import { ProofsPopup } from './proofs'
 
 /**
  * To create a new popup on needs add a option to `PopupType`,
@@ -35,6 +36,8 @@ function getPopupContent(popup: PopupType) {
       return <PrivacyPolicyPopup />
     case PopupType.recap:
       return <WorldRecapPopup />
+    case PopupType.proofs:
+      return <ProofsPopup />
     case PopupType.rules:
       return <RulesHelpPopup />
     case PopupType.upload:
@@ -93,7 +96,7 @@ export function Popup () {
 
   return <div className="modal-wrapper">
   <div className="modal-backdrop" onClick={closePopup} />
-  <div className="modal" role="dialog" aria-modal="true" tabIndex={-1} ref={modalRef}>
+  <div className={`modal${popup === PopupType.proofs ? ' modal-wide' : ''}`} role="dialog" aria-modal="true" tabIndex={-1} ref={modalRef}>
     <button className="codicon codicon-close modal-close" onClick={closePopup} aria-label={t("Close")} title={t("Close")}></button>
     {getPopupContent(popup)}
   </div>

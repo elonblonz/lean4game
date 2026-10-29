@@ -38,43 +38,6 @@
   border-top: 1px solid var(--clr-divider);
 }
 
-.written-proof-lines {
-  margin: 0;
-  padding: 0 .75em .5em 2.5em;
-  list-style: decimal;
-}
-
-.written-proof-line {
-  padding: .1em .3em;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-
-.written-proof-line .markdown p {
-  margin: 0;
-}
-
-.written-proof-line.untranslated code {
-  color: var(--clr-text-muted);
-}
-
-.written-proof-line.selected, .written-proof-line:hover {
-  background-color: var(--clr-surface-subtle);
-}
-
-.written-proof-empty {
-  margin: 0 0 .5em;
-  padding: 0 .75em;
-  color: var(--clr-text-muted);
-  font-style: italic;
-}
-
-.written-proof-qed {
-  margin: 0 0 .5em;
-  padding: 0 1em;
-  text-align: right;
-}
-
 .notes-field {
   display: block;
   box-sizing: border-box;

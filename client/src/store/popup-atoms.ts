@@ -8,6 +8,7 @@ export enum PopupType {
   preferences = 'preferences',
   privacy = 'privacy',
   recap = 'recap',
+  proofs = 'proofs',
   rules = 'rules',
   upload = 'upload',
 }

@@ -9,7 +9,7 @@ import { worldIdAtom } from '../store/location-atoms'
 import { gameInfoAtom } from '../store/query-atoms'
 import { mobileAtom } from '../store/preferences-atoms'
 import { HomeButton, InputModeButton, LandingPageButton, MobileNavButtons, NextButton, PreviousButton } from './navigation/level_nav_buttons'
-import { DownloadButton, EraseButton, GameInfoButton, ImpressumButton, MenuButton, PreferencesButton, PrivacyButton, UploadButton } from './navigation/menu_buttons'
+import { DownloadButton, EraseButton, GameInfoButton, ImpressumButton, MenuButton, PreferencesButton, PrivacyButton, ProofsButton, UploadButton } from './navigation/menu_buttons'
 import { LanguageButton, LanguageDropdown } from './navigation/language'
 
 /** the navigation bar on the welcome page */
@@ -38,6 +38,7 @@ export function WelcomeAppBar({pageNumber, setPageNumber} : {
     <LanguageDropdown />
     <div className={'menu dropdown' + (navOpen ? '' : ' hidden')}>
       <GameInfoButton />
+      <ProofsButton />
       <DownloadButton />
       <UploadButton />
       <EraseButton />
@@ -80,6 +81,7 @@ export function LevelAppBar({isLoading, levelTitle, pageNumber=1, setPageNumber=
           <HomeButton isDropdown={true} />
           <InputModeButton isDropdown={true}/>
           <GameInfoButton />
+          <ProofsButton />
           <ImpressumButton isDropdown={true} />
           <PrivacyButton isDropdown={true} />
           <EraseButton />
@@ -105,6 +107,7 @@ export function LevelAppBar({isLoading, levelTitle, pageNumber=1, setPageNumber=
         <LanguageDropdown />
         <div className={'menu dropdown' + (navOpen ? '' : ' hidden')}>
           <GameInfoButton />
+          <ProofsButton />
           <ImpressumButton isDropdown={true} />
           <PrivacyButton isDropdown={true} />
           <EraseButton />

@@ -3,7 +3,7 @@
  */
 import * as React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faUpload, faEraser, faXmark, faBars, faCircleInfo, faGear } from '@fortawesome/free-solid-svg-icons'
+import { faDownload, faUpload, faEraser, faXmark, faBars, faCircleInfo, faGear, faFeatherPointed } from '@fortawesome/free-solid-svg-icons'
 import { useTranslation } from 'react-i18next'
 import { useAtom } from 'jotai'
 import { Button } from '../button'
@@ -61,6 +61,15 @@ export function GameInfoButton() {
   return <Button className="btn btn-inverted"
     title={t("Game Info & Credits")} inverted={true}  onClick={() => {setPopup(PopupType.info); closeNav()}}>
     <FontAwesomeIcon icon={faCircleInfo} />&nbsp;{t("Game Info")}
+  </Button>
+}
+
+export function ProofsButton() {
+  const [, closeNav] = useAtom(closeNavAtom)
+  const [, setPopup] = useAtom(popupAtom)
+  const { t } = useTranslation()
+  return <Button title={t("All the proofs you have completed, written out")} inverted={true} onClick={() => {setPopup(PopupType.proofs); closeNav()}}>
+    <FontAwesomeIcon icon={faFeatherPointed} />&nbsp;{t("My proofs")}
   </Button>
 }
 
