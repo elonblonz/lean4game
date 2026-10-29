@@ -1,0 +1,83 @@
+# Once a week: list the commits of upstream lean4game that our release branch does not have yet,
+# in a single issue of the fork (opened, updated, or closed once the branch has caught up).
+# Note: GitHub runs scheduled workflows only from the repository's default branch.
+name: Upstream changes
+on:
+  schedule:
+    - cron: "23 5 * * 1"  # Mondays, 05:23 UTC
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: ${{ github.workflow }}
+defaults:
+  run:
+    shell: bash
+env:
+  UPSTREAM_REPO: leanprover-community/lean4game
+  UPSTREAM_BRANCH: main
+  BRANCH: stg4-ui
+  ISSUE_TITLE: "Upstream lean4game has commits that stg4-ui does not have"
+jobs:
+  check:
+    name: Compare with upstream
+    # Only in forks: upstream itself has nothing to compare with.
+    if: github.repository != 'leanprover-community/lean4game'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: List the new upstream commits
+        id: compare
+        run: |
+          git fetch --no-tags "https://github.com/$UPSTREAM_REPO.git" "$UPSTREAM_BRANCH"
+          upstream=$(git rev-parse FETCH_HEAD)
+          behind=$(git rev-list --count "HEAD..$upstream")
+          echo "behind=$behind" >> "$GITHUB_OUTPUT"
+          {
+            echo "\`$BRANCH\` is **$behind** commit(s) behind [\`$UPSTREAM_REPO\` $UPSTREAM_BRANCH](https://github.com/$UPSTREAM_REPO/tree/$UPSTREAM_BRANCH) (at [\`${upstream:0:7}\`](https://github.com/$UPSTREAM_REPO/commit/$upstream))."
+            echo
+            echo "Compare: https://github.com/$UPSTREAM_REPO/compare/$(git rev-parse HEAD)...$upstream"
+            echo
+            echo "New upstream commits (oldest first):"
+            echo
+            # Keep the issue well below GitHub's size limit.
+            if [ "$(git rev-list --count --no-merges "HEAD..$upstream")" -gt 300 ]; then
+              echo "- ... (only the latest 300 are listed)"
+            fi
+            git log --reverse --no-merges --max-count=300 \
+              --format="- [\`%h\`](https://github.com/$UPSTREAM_REPO/commit/%H) %s (%an, %as)" "HEAD..$upstream"
+            echo
+            echo "_Updated by the [${GITHUB_WORKFLOW}]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID) workflow._"
+          } > body.md
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BEHIND: ${{ steps.compare.outputs.behind }}
+        run: |
+          if [ "$(gh api "repos/$GH_REPO" --jq .has_issues)" != "true" ]; then
+            echo "::error::Issues are disabled in $GH_REPO; enable them (Settings > General > Features) to get the list as an issue. It is in this run's summary."
+            exit 1
+          fi
+          issue=$(gh issue list --state open --limit 100 --json number,title \
+            --jq "map(select(.title == \"$ISSUE_TITLE\")) | first | .number // empty")
+          if [ "$BEHIND" -gt 0 ]; then
+            if [ -n "$issue" ]; then
+              gh issue edit "$issue" --body-file body.md
+              echo "Updated issue #$issue"
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file body.md
+            fi
+          elif [ -n "$issue" ]; then
+            gh issue close "$issue" --comment "\`$BRANCH\` has all commits of \`$UPSTREAM_REPO\` $UPSTREAM_BRANCH now."
+          else
+            echo "$BRANCH is up to date with $UPSTREAM_REPO $UPSTREAM_BRANCH"
+          fi
