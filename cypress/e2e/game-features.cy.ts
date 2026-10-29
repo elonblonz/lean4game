@@ -15,6 +15,9 @@ describe('Basic Lean4Game Features', () => {
       return true
     })
 
+    // Desktop layout: narrower windows get the mobile layout (see `AUTO_SWITCH_THRESHOLD`).
+    cy.viewport(1280, 800)
+
     // Navigate to test game before each test
     cy.visit('/#/g/test/TestGame')
     cy.contains('This is the introduction text of the game.', { timeout: 15000 })
@@ -90,23 +93,20 @@ describe('Basic Lean4Game Features', () => {
 
       cy.get(".fa-code").click()
 
-      cy.contains('Current Goal')
-      cy.contains('unsolved goals')
-      cy.get('.infoview').contains('x + x = y')
-      cy.get('.infoview').contains('You can either start using h or g.')
+      // The goal is in Lean's infoview (an iframe), the hints stay in the chat.
+      cy.frameLoaded('.infoview iframe')
+      cy.iframe('.infoview iframe').contains('unsolved goals', { timeout: 30000 })
+      cy.iframe('.infoview iframe').contains('x + x = y')
+      cy.get('.chat').contains('You can either start using h or g.')
 
       cy.get('.codeview').type('rw [h]{enter}')
 
-      cy.contains('2 + 2 = y')
-      cy.get('.infoview').contains('2 + 2 = y')
-      cy.contains('Current Goal')
-      cy.contains('unsolved goals')
-      cy.get('.infoview').contains('You should use g now.')
+      cy.iframe('.infoview iframe').contains('2 + 2 = y', { timeout: 30000 })
+      cy.get('.chat').contains('You should use g now.', { timeout: 30000 })
 
-      cy.focused().type('{uparrow}')
-      cy.get('.infoview').contains('x + x = y')
-      cy.get('.infoview').contains('You can either start using h or g.')
-
+      // The infoview follows the cursor.
+      cy.focused().type('{uparrow}{uparrow}')
+      cy.iframe('.infoview iframe').contains('x + x = y')
     })
   })
 
@@ -214,7 +214,10 @@ describe('Basic Lean4Game Features', () => {
       cy.contains('unsolved goals').should('not.exist')
 
       cy.get(".fa-code").click()
-      cy.contains('unsolved goals').should('be.visible')
+      // The infoview shows the messages at the cursor: Lean reports the error at the end.
+      cy.get('.codeview').type('{ctrl+end}')
+      cy.frameLoaded('.infoview iframe')
+      cy.iframe('.infoview iframe').contains('unsolved goals', { timeout: 30000 }).should('be.visible')
     })
   })
 
@@ -267,12 +270,13 @@ describe('Basic Lean4Game Features', () => {
       cy.contains('Preferences').click()
 
       // Select german language
-      cy.get('.MuiSelect-select').click()
+      // the first select is the language
+      cy.get('.MuiSelect-select').first().click()
       cy.get('.MuiPaper-root').click()
       cy.get('li[data-value="de"]').click()
 
       // Close preferences
-      cy.get('.codicon').click()
+      cy.get('.modal-close').click()
 
       // Check that displayed language is german
       cy.contains('Du kannst mit h oder g starten.').should('be.visible')
@@ -281,9 +285,10 @@ describe('Basic Lean4Game Features', () => {
     it('should render an intentionally empty game translation', () => {
       cy.get('#menu-btn').click()
       cy.contains('Preferences').click()
-      cy.get('.MuiSelect-select').click()
+      // the first select is the language
+      cy.get('.MuiSelect-select').first().click()
       cy.get('li[data-value="de"]').click({ force: true })
-      cy.get('.codicon').click()
+      cy.get('.modal-close').click()
 
       cy.contains('This is the introduction text of the game.').should('not.exist')
       cy.get('.chat-panel .hint').should('not.exist')
@@ -298,15 +303,179 @@ describe('Basic Lean4Game Features', () => {
       cy.contains('Preferences').click()
 
       // Select mandarin language
-      cy.get('.MuiSelect-select').click()
+      // the first select is the language
+      cy.get('.MuiSelect-select').first().click()
       cy.get('.MuiPaper-root').click()
       cy.get('li[data-value="zh"]').click()
 
       // Close preferences
-      cy.get('.codicon').click()
+      cy.get('.modal-close').click()
 
       // Check that displayed language is english
       cy.contains('You can either start using h or g.').should('be.visible')
+    })
+  })
+
+  // The typewriter's command line. Type into Monaco's input itself: right after a level opens,
+  // clicking the editor doesn't always give it the focus in time.
+  const typeCommand = (command: string) =>
+    cy.get('.typewriter-input .monaco-editor textarea').focus().type(`${command}{enter}`)
+
+  // Solve level 1 of the test game (from inside the level)
+  const solveLevel1 = () => {
+    typeCommand('rw [h]')
+    cy.contains('2 + 2 = y', { timeout: 30000 }).should('be.visible')
+    typeCommand('rw [g]')
+    cy.contains('Level completed!', { timeout: 60000 })
+  }
+
+  describe('Level Navigation', () => {
+    it('should move between levels with the app bar', () => {
+      // With the default rules, "Next" needs the level to be solved: start at level 2.
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/2')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.app-bar').contains('Level 2 / 3')
+      cy.contains('Hypothesis Names')
+
+      cy.get('.app-bar').find('[title="previous level"]').click()
+      cy.url().should('include', '/world/TestWorld/level/1')
+      cy.get('.app-bar').contains('Level 1 / 3')
+      // The new level is announced to screen readers.
+      cy.get('[role="status"]').should('contain', 'Level 1 / 3')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.app-bar').find('[title="next level"]').should('be.disabled')
+
+      solveLevel1()
+      cy.get('.app-bar').find('[title="next level"]').should('not.be.disabled')
+      // The Next button below the hints gets the focus.
+      cy.focused().should('contain', 'Next').click()
+      cy.url().should('include', '/world/TestWorld/level/2')
+      cy.contains('Assumptions:', { timeout: 60000 })
+
+      cy.get('#home-btn').click()
+      cy.url().should('match', /#\/g\/test\/TestGame$/)
+      cy.contains('This is the introduction text of the game.')
+    })
+
+    it('should navigate the world map with the keyboard', () => {
+      cy.get('svg .world[role="button"]').first().focus()
+      cy.focused().should('have.attr', 'aria-label').and('contain', 'Test World')
+      // The arrow keys move from the world to its levels.
+      cy.focused().type('{rightarrow}')
+      cy.focused().should('have.attr', 'aria-label').and('contain', 'Level 1')
+      // Enter opens it: the world's introduction, which hasn't been read yet.
+      cy.focused().type('{enter}')
+      cy.url().should('include', '/world/TestWorld/level/0')
+      cy.contains('This is the introduction of Test World.')
+    })
+  })
+
+  describe('Hints Appearing', () => {
+    it('should show a new hint in the chat after a command', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.chat[role="log"]').within(() => {
+        cy.contains('You can either start using h or g.').should('be.visible')
+        cy.contains('You should use g now.').should('not.exist')
+      })
+      typeCommand('rw [h]')
+      cy.get('.chat[role="log"]').contains('You should use g now.', { timeout: 30000 }).should('be.visible')
+    })
+  })
+
+  describe('Inventory', () => {
+    it('should unlock the level\'s tactics once it is solved', () => {
+      // Before: locked in the game's inventory on the welcome page.
+      cy.get('.inventory').contains('.item', 'rw').should('have.class', 'locked')
+        .and('have.attr', 'aria-label').and('contain', 'Not unlocked yet')
+
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      solveLevel1()
+
+      cy.get('#home-btn').click()
+      cy.get('.inventory').contains('.item', 'rw').should('not.have.class', 'locked')
+      cy.get('.inventory').contains('.item', 'rfl').should('not.have.class', 'locked')
+      // ... and in the world's introduction.
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/0')
+      cy.get('.inventory').contains('.item', 'rw').should('not.have.class', 'locked')
+    })
+
+    it('should be usable with the keyboard', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      // The tabs: arrow keys move, Enter selects.
+      cy.get('.inventory [role="tab"][aria-selected="true"]').should('contain', 'Tactics').focus()
+      cy.focused().type('{leftarrow}')
+      cy.focused().should('contain', 'Theorems').type('{enter}')
+      cy.get('.inventory [role="tab"][aria-selected="true"]').should('contain', 'Theorems')
+      // An item opens its doc with Enter, Escape closes it and gives the focus back.
+      cy.get('.inventory').contains('[role="button"]', 'add_comm').focus().type('{enter}')
+      cy.get('.documentation').contains('Commutativity').should('be.visible')
+      cy.focused().type('{esc}')
+      cy.get('.documentation').should('not.exist')
+      cy.focused().should('contain', 'add_comm')
+    })
+  })
+
+  describe('Appearance', () => {
+    it('should switch to dark mode', () => {
+      cy.get('html').should('have.attr', 'data-theme', 'light')
+      cy.get('#menu-btn').click()
+      cy.contains('Preferences').click()
+      cy.get('[role="dialog"]').should('have.attr', 'aria-labelledby')
+      cy.contains('.preferences-category', 'Appearance').find('.MuiSelect-select').first().click()
+      cy.get('li[data-value="dark"]').click()
+      cy.get('html').should('have.attr', 'data-theme', 'dark')
+      cy.get('body').should('have.css', 'background-color', 'rgb(30, 33, 39)')
+      // Escape closes the popup.
+      cy.get('body').type('{esc}')
+      cy.get('[role="dialog"]').should('not.exist')
+      // The setting is saved.
+      cy.reload()
+      cy.contains('This is the introduction text of the game.', { timeout: 15000 })
+      cy.get('html').should('have.attr', 'data-theme', 'dark')
+    })
+
+    it('should turn off animations when asked to', () => {
+      cy.get('html').should('have.attr', 'data-reduced-motion')
+      cy.get('#menu-btn').click()
+      cy.contains('Preferences').click()
+      cy.contains('.preferences-item', 'Animations').find('.MuiSelect-select').click()
+      cy.get('li[data-value="reduce"]').click()
+      cy.get('html').should('have.attr', 'data-reduced-motion', 'true')
+      cy.get('.modal-close').click()
+      cy.get('.btn').first().should('have.css', 'transition-duration', '1e-05s')
+    })
+  })
+
+  describe('Mobile Viewport', () => {
+    it('should show the level one panel at a time', () => {
+      cy.viewport(390, 844)
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.get('.app-bar.mobile').should('be.visible')
+      cy.get('.level-mobile').should('exist')
+      cy.contains('Assumptions:', { timeout: 60000 }).should('be.visible')
+      // On mobile, the hints are shown inside the proof.
+      cy.contains('You can either start using h or g.').should('be.visible')
+
+      cy.get('.mobile-page-switch').contains('[role="tab"]', 'Inventory').click()
+      cy.get('#level-page-inventory').should('be.visible')
+      cy.get('#level-page-proof').should('not.be.visible')
+      cy.get('.inventory').contains('rw').should('be.visible')
+
+      cy.get('.mobile-page-switch').contains('[role="tab"]', 'Proof')
+        .should('have.attr', 'aria-selected', 'false').click()
+      cy.get('#level-page-proof').should('be.visible')
+      typeCommand('rw [h]')
+      cy.contains('You should use g now.', { timeout: 30000 }).should('be.visible')
+    })
+
+    it('should page through the welcome page', () => {
+      cy.viewport(390, 844)
+      cy.get('.welcome.mobile').should('exist')
+      cy.get('.welcome.mobile').contains('Start').click()
+      cy.get('svg .world[role="button"]').should('be.visible')
     })
   })
 })
