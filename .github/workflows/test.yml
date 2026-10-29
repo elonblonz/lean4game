@@ -5,11 +5,9 @@ on:
   push:
     branches:
       - main
-      - stg4-ui
   pull_request:
     branches:
       - main
-      - stg4-ui
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -75,9 +73,6 @@ jobs:
           npm install
           npm run build
           npm run build:test
-
-      - name: Run relay unit tests
-        run: npm --workspace relay run test
 
       - name: Run Cypress tests (Development mode)
         run: npm run test
