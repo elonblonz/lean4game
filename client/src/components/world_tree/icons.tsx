@@ -27,6 +27,8 @@ export function LevelIcon({ world, level, position }:
   const [completed] = useAtom(levelCompletedAtomFamily(`${world}:${level}`))
 
   const unlocked = level <= 1 ? worldUnlocked && levelUnlocked : levelUnlocked
+  const { t: gT } = useGameTranslation()
+  const worldTitle = gT(gameInfo?.worlds?.nodes[world]?.title || world)
   const levelDisabled = (difficulty >= 2 && !(unlocked || completed))
   const [, navigateAcrossWorlds] = useAtom(navigateAcrossWorldsAtom)
 
@@ -40,7 +42,9 @@ export function LevelIcon({ world, level, position }:
 
   return (
     <a onClick={() => {if (!levelDisabled) navigateAcrossWorlds(world, targetLevel)}}
-        {...mapIconProps(`${t("Level")} ${level}`, levelDisabled, () => navigateAcrossWorlds(world, targetLevel))}
+        {...mapIconProps(`${worldTitle}, ${t("Level")} ${level}` +
+            (completed ? ` (${t("completed")})` : !unlocked ? ` (${t("locked")})` : ''),
+          levelDisabled, () => navigateAcrossWorlds(world, targetLevel))}
         className={`level${levelDisabled ? ' disabled' : ''}`}>
       <circle style={{fill: completed ? lightgreen : unlocked? blue : lightgrey}} cx={x} cy={y} r={r} />
       <foreignObject className="level-title-wrapper" x={x} y={y}
@@ -62,6 +66,7 @@ export function WorldIcon({world, title, position}:
     title: string,
     position: cytoscape.Position,
   }) {
+  const { t } = useTranslation()
   const { t : gT } = useGameTranslation()
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   const [difficulty] = useAtom(difficultyAtom)
@@ -79,7 +84,9 @@ export function WorldIcon({world, title, position}:
 
   return <a
       onClick={() => {if (!worldDisabled) navigateAcrossWorlds(world, firstUncompleted)}}
-      {...mapIconProps(title ? gT(title) : world, worldDisabled, () => navigateAcrossWorlds(world, firstUncompleted))}
+      {...mapIconProps((title ? gT(title) : world) +
+          (completed ? ` (${t("completed")})` : !unlocked ? ` (${t("locked")})` : ''),
+        worldDisabled, () => navigateAcrossWorlds(world, firstUncompleted))}
       className={`world${worldDisabled ? ' disabled' : ''}`}>
     <circle className="world-circle" cx={s*position.x} cy={s*position.y} r={R}
         style={{fill: completed ? green : unlocked ? blue : grey}}/>
@@ -119,7 +126,8 @@ export function WorldPath({source, target, sourceWorld} : {source: {position: cy
 }
 
 /** Props that make a map icon usable with the keyboard: focusable unless disabled, opened with
- * Enter or Space, and named for screen readers. */
+ * Enter or Space, and named for screen readers. The arrow keys move between the icons (see
+ * `WorldTreePanel`). */
 function mapIconProps(label: string, disabled: boolean, open: () => void) {
   return {
     role: "button",

@@ -140,5 +140,14 @@
   "No game is open.": "No game is open.",
   "The file could not be read.": "The file could not be read.",
   "Close": "Close",
-  "Menu": "Menu"
+  "Menu": "Menu",
+  "Hints": "Hints",
+  "World map": "World map",
+  "completed": "completed",
+  "locked": "locked",
+  "new": "new",
+  "Command": "Command",
+  "Animations": "Animations",
+  "Reduced (no transitions, no blinking cursor)": "Reduced (no transitions, no blinking cursor)",
+  "Full": "Full"
 }

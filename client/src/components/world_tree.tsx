@@ -10,9 +10,12 @@ import { mobileAtom } from '../store/preferences-atoms'
 import { computeWorldLayout, ds, dsMobile, s, WorldLayout, worldTreePadding } from './world_tree/layout'
 import { LevelIcon, WorldIcon, WorldPath } from './world_tree/icons'
 import { WorldSelectionMenu } from './world_tree/menu'
+import { useTranslation } from 'react-i18next'
+import { moveFocusWithArrows } from '../utils/a11y'
 
 /** The world map: the worlds, their levels, and the menu with the rules setting */
 export function WorldTreePanel() {
+  const { t } = useTranslation()
   const [gameId] = useAtom(gameIdAtom)
   const [mobile] = useAtom(mobileAtom)
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
@@ -90,7 +93,11 @@ export function WorldTreePanel() {
     <div className="panel">
       <WorldSelectionMenu />
       <div className={`world-tree${mobile ? ' mobile' : ''}`}>
+        {/* Tab or the arrow keys move between the worlds and levels, Enter opens one. */}
         <svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink"
+            role="group" aria-label={t("World map")}
+            onKeyDown={ev => moveFocusWithArrows(ev,
+              Array.from(ev.currentTarget.querySelectorAll<HTMLElement>('[role="button"][tabindex="0"]')))}
             width={bounds ? `${(mobile ? dsMobile : ds) * dx}` : ''}
             viewBox={bounds ? `${s*bounds.x1 - padding} ${s*bounds.y1 - padding} ${dx} ${s*(bounds.y2 - bounds.y1) + 2 * padding}` : ''}
             className="world-selection" >

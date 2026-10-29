@@ -169,5 +169,14 @@
   "The file could not be read.": "Не удалось прочитать файл.",
   "The operator of this site has not provided this information yet.": "Владелец этого сайта ещё не предоставил эту информацию.",
   "Close": "Закрыть",
-  "Menu": "Меню"
+  "Menu": "Меню",
+  "Hints": "Подсказки",
+  "World map": "Карта миров",
+  "completed": "пройдено",
+  "locked": "заблокировано",
+  "new": "новое",
+  "Command": "Команда",
+  "Animations": "Анимации",
+  "Reduced (no transitions, no blinking cursor)": "Меньше (без переходов, курсор не мигает)",
+  "Full": "Все"
 }

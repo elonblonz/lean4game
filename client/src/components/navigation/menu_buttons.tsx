@@ -18,7 +18,7 @@ export function MenuButton() {
   const { t } = useTranslation()
   const [navOpen, setNavOpen] = useAtom(navOpenAtom)
   return <Button  className="btn toggle-width" id="menu-btn" onClick={(ev) => {setNavOpen(!navOpen)}}
-      title={t("Menu")} aria-label={t("Menu")} aria-expanded={navOpen}>
+      title={t("Menu")} aria-label={t("Menu")} aria-expanded={navOpen} aria-haspopup="true">
     {navOpen ? <FontAwesomeIcon icon={faXmark} /> : <FontAwesomeIcon icon={faBars} />}
   </Button>
 }

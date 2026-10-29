@@ -89,7 +89,8 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
   }, [!!proof?.completed])
 
   return <div className={`chat-panel ${visible ? '' : 'hidden'}`}>
-    <div ref={chatRef} className="chat">
+    {/* New hints are read out by screen readers. */}
+    <div ref={chatRef} className="chat" role="log" aria-live="polite" aria-label={t("Hints")}>
       {introText?.filter(it => it.trim()).map(((it, i) =>
         // Show the level's intro text as hints, too
         <Hint key={`intro-p-${i}`}

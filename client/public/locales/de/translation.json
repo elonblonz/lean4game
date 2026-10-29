@@ -132,5 +132,14 @@
   "Editor Mode": "",
   "Typewriter Mode": "",
   "Proof": "Beweis",
-  "Inventory": "Inventar"
+  "Inventory": "Inventar",
+  "Hints": "Hinweise",
+  "World map": "Weltkarte",
+  "completed": "abgeschlossen",
+  "locked": "gesperrt",
+  "new": "neu",
+  "Command": "Befehl",
+  "Animations": "Animationen",
+  "Reduced (no transitions, no blinking cursor)": "Reduziert (keine Übergänge, kein blinkender Cursor)",
+  "Full": "Alle"
 }

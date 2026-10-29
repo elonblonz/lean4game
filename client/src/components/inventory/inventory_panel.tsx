@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react"
 import "../../css/inventory.css"
 import { closeDocAtom, inventorySourceAtom, inventoryTabAtom, selectedDocTileAtom, theoremSubtabAtom } from "../../store/inventory-atoms"
 import { useAtom } from "jotai"
+import { useTranslation } from "react-i18next"
 import { InventorySubTabBar, InventoryTabBar } from "./tab_bars"
 import { InventoryList } from "./inventory_list"
 import { Documentation } from "./documentation"
@@ -11,9 +12,11 @@ import { difficultyAtom } from "../../store/progress-atoms"
  *
  * In a level it shows the level's inventory, otherwise the game's (see `inventorySourceAtom`).
  */
-export function InventoryPanel({visible = true} : {
-  visible?: boolean
+export function InventoryPanel({visible = true, id} : {
+  visible?: boolean,
+  id?: string,
 }) {
+  const { t } = useTranslation()
   const [tab] = useAtom(inventoryTabAtom)
   const [, setSubtab] = useAtom(theoremSubtabAtom)
   const [doc] = useAtom(selectedDocTileAtom)
@@ -37,7 +40,8 @@ export function InventoryPanel({visible = true} : {
     }
   }, [source])
 
-  return <div className={`column inventory-panel inventory panel ${visible ? '' : 'hidden'}`}>
+  return <div className={`column inventory-panel inventory panel ${visible ? '' : 'hidden'}`}
+      id={id} role="complementary" aria-label={t("Inventory")}>
     <InventoryTabBar />
     <InventorySubTabBar />
     <InventoryList docType={tab} enableAll={difficulty == 0} />

@@ -31,10 +31,11 @@ import { Popup } from './components/popup/popup';
 import { leanMonacoAtom, leanMonacoOptionsAtom } from './store/lean-atoms';
 import { LeanMonaco } from 'lean4monaco';
 import * as monaco from 'monaco-editor';
-import { darkModeAtom, preferencesAtom } from './store/preferences-atoms';
+import { darkModeAtom, preferencesAtom, reducedMotionAtom } from './store/preferences-atoms';
 import { gameInfoAtom } from './store/query-atoms';
 import { hashSegmentsAtom } from './store/location-atoms';
 import { langNavOpenAtom, navOpenAtom } from './store/navigation-atoms';
+import { popupAtom } from './store/popup-atoms';
 
 /** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `css/tokens.css`. */
 const DARK_BACKGROUND = '#1e2127'
@@ -62,6 +63,22 @@ function App({ children }: { children?: React.ReactNode }) {
     setLangNavOpen(false)
   }, [hashSegments.join('/')])
 
+  // Escape closes an open menu (when no popup is open: that closes first).
+  const [navOpen] = useAtom(navOpenAtom)
+  const [langNavOpen] = useAtom(langNavOpenAtom)
+  const [popup] = useAtom(popupAtom)
+  useEffect(() => {
+    if (!(navOpen || langNavOpen) || popup) return
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== "Escape") return
+      setNavOpen(false)
+      setLangNavOpen(false)
+      document.getElementById('menu-btn')?.focus()
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [navOpen, langNavOpen, popup])
+
   // Name the browser tab after the game being played.
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   useEffect(() => {
@@ -88,6 +105,12 @@ function App({ children }: { children?: React.ReactNode }) {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light"
   }, [darkMode])
 
+  // Turn off the CSS animations (see `css/reset.css`) if the player prefers reduced motion.
+  const [reducedMotion] = useAtom(reducedMotionAtom)
+  useLayoutEffect(() => {
+    document.documentElement.dataset.reducedMotion = reducedMotion ? "true" : "false"
+  }, [reducedMotion])
+
   // Monaco's theme is global. `LeanMonaco.start` sets it from the browser setting, so this
   // overrides it once LeanMonaco is ready. The theme is deliberately not part of
   // `leanMonacoOptionsAtom`: changing those options restarts the Lean connection.
@@ -101,6 +124,7 @@ function App({ children }: { children?: React.ReactNode }) {
       monaco.editor.setTheme(darkMode ? "Visual Studio Dark" : "Visual Studio Light")
       leanMonaco.updateVSCodeOptions({
         "workbench.colorTheme": darkMode ? "Visual Studio Dark" : "Visual Studio Light",
+        "editor.cursorBlinking": reducedMotion ? "solid" : "blink",
         // Give the editors the same background as the panels around them.
         "workbench.colorCustomizations": {
           "[Visual Studio Dark]": {
@@ -110,7 +134,7 @@ function App({ children }: { children?: React.ReactNode }) {
       })
     })
     return () => { cancelled = true }
-  }, [leanMonaco, darkMode])
+  }, [leanMonaco, darkMode, reducedMotion])
 
   const muiTheme = useMemo(() => createTheme({
     palette: darkMode ? {

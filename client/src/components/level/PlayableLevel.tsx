@@ -51,16 +51,23 @@ export function PlayableLevel() {
       isLoading={levelInfoIsLoading}
       levelTitle={levelTitle}
       />
+    {/* Announce the level that was opened: the focus moves to the command line or the editor
+        (see `TypewriterCommandLine` and `useLevelGameLogic`), not to the title. */}
+    <div className="visually-hidden" role="status">
+      {!levelInfoIsLoading && levelTitle}
+    </div>
     {mobile?
       <div className={`app-content level-mobile ${levelInfoIsLoading ? 'hidden' : ''}`}>
         <div className="mobile-page-switch" role="tablist">
-          <button role="tab" aria-selected={pageNumber == 0} className={pageNumber == 0 ? "active" : ""}
+          <button role="tab" aria-selected={pageNumber == 0} aria-controls="level-page-proof"
+            className={pageNumber == 0 ? "active" : ""}
             onClick={() => setPageNumber(0)}>{t("Proof")}</button>
-          <button role="tab" aria-selected={pageNumber == 1} className={pageNumber == 1 ? "active" : ""}
+          <button role="tab" aria-selected={pageNumber == 1} aria-controls="level-page-inventory"
+            className={pageNumber == 1 ? "active" : ""}
             onClick={() => setPageNumber(1)}>{t("Inventory")}</button>
         </div>
-        <ExercisePanel codeviewRef={codeviewRef} visible={pageNumber == 0} />
-        <InventoryPanel visible={pageNumber == 1} />
+        <ExercisePanel codeviewRef={codeviewRef} visible={pageNumber == 0} id="level-page-proof" />
+        <InventoryPanel visible={pageNumber == 1} id="level-page-inventory" />
       </div>
     :
       <Split minSize={0} snapOffset={200} sizes={[25, 50, 25]} className={`app-content level ${levelInfoIsLoading ? 'hidden' : ''}`}>

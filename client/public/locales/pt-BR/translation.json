@@ -146,5 +146,14 @@
   "next level": "próximo nível",
   "previous level": "nível anterior",
   "show inventory": "mostrar inventário",
-  "Proof": "Prova"
+  "Proof": "Prova",
+  "Hints": "Dicas",
+  "World map": "Mapa dos mundos",
+  "completed": "concluído",
+  "locked": "bloqueado",
+  "new": "novo",
+  "Command": "Comando",
+  "Animations": "Animações",
+  "Reduced (no transitions, no blinking cursor)": "Reduzidas (sem transições, cursor fixo)",
+  "Full": "Completas"
 }

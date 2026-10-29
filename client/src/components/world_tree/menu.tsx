@@ -7,6 +7,7 @@ import { useAtom } from 'jotai'
 import { popupAtom, PopupType } from '../../store/popup-atoms'
 import { difficultyAtom } from '../../store/progress-atoms'
 import { mobileAtom } from '../../store/preferences-atoms'
+import { buttonProps } from '../../utils/a11y'
 
 /** The menu that is shown next to the world selection graph */
 export function WorldSelectionMenu() {
@@ -24,10 +25,12 @@ export function WorldSelectionMenu() {
     <div className="slider-wrap">
       <span className="difficulty-label">
         {t("Rules")}
-        <FontAwesomeIcon
-          onClick={() => {setPopup(PopupType.rules)}}
-          icon={(popup == PopupType.rules) ? faXmark : faCircleQuestion}
-          className='helpButton' />
+        <span onClick={() => {setPopup(PopupType.rules)}} title={t("Game Rules")} aria-label={t("Game Rules")}
+            {...buttonProps(() => setPopup(PopupType.rules))}>
+          <FontAwesomeIcon
+            icon={(popup == PopupType.rules) ? faXmark : faCircleQuestion}
+            className='helpButton' />
+        </span>
       </span>
       <Slider
         orientation={mobile ? "horizontal" : "vertical"}

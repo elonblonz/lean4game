@@ -63,6 +63,10 @@ export function PreferencesPopup() {
     setPreferences(prev => ({ ...prev, theme: ev.target.value as Preferences["theme"] }))
   }
 
+  const handlerChangeMotion = (ev: SelectChangeEvent<NonNullable<Preferences["motion"]>>) => {
+    setPreferences(prev => ({ ...prev, motion: ev.target.value as Preferences["motion"] }))
+  }
+
   return <Typography variant="body1" component="div" className="settings">
         <div className='preferences-category'>
           <div className='category-title'>
@@ -149,6 +153,19 @@ export function PreferencesPopup() {
                   <MenuItem value="system">{t("Same as system")}</MenuItem>
                   <MenuItem value="light">{t("Light")}</MenuItem>
                   <MenuItem value="dark">{t("Dark")}</MenuItem>
+              </Select>
+            </WideControl>
+          </div>
+          <div className='preferences-item leave-left-gap'>
+            <p id="motion-label">{t("Animations")}</p>
+            <WideControl>
+              <Select
+                value={preferences.motion ?? "system"}
+                inputProps={{ "aria-labelledby": "motion-label" }}
+                onChange={handlerChangeMotion}>
+                  <MenuItem value="system">{t("Same as system")}</MenuItem>
+                  <MenuItem value="reduce">{t("Reduced (no transitions, no blinking cursor)")}</MenuItem>
+                  <MenuItem value="full">{t("Full")}</MenuItem>
               </Select>
             </WideControl>
           </div>

@@ -9,7 +9,7 @@ import { codeAtom, appendCodeLineAtom, lastProofStepErrorCommandAtom, proofAtom,
 import { twMerge } from "tailwind-merge";
 import { deletedChatAtom } from "../../../store/chat-atoms";
 import { oneLineEditorAtom, typewriterContentAtom } from "../../../store/typewriter-atoms";
-import { darkModeAtom } from "../../../store/preferences-atoms";
+import { darkModeAtom, reducedMotionAtom } from "../../../store/preferences-atoms";
 
 /** The input field */
 export function TypewriterCommandLine() {
@@ -25,6 +25,7 @@ export function TypewriterCommandLine() {
   const [failedCommand] = useAtom(lastProofStepErrorCommandAtom)
   const [proof] = useAtom(proofAtom)
   const [darkMode] = useAtom(darkModeAtom)
+  const [reducedMotion] = useAtom(reducedMotionAtom)
   const oneLineEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const inputRef = useRef<HTMLDivElement>(null)
 
@@ -102,6 +103,8 @@ export function TypewriterCommandLine() {
       scrollBeyondLastLine: false,
       overviewRulerBorder: false,
       theme: darkMode ? 'Visual Studio Dark' : 'Visual Studio Light',
+      cursorBlinking: reducedMotion ? 'solid' : 'blink',
+      ariaLabel: t("Command"),
       contextmenu: false
     }
 
@@ -152,6 +155,11 @@ export function TypewriterCommandLine() {
       setOneLineEditor(null)
     }
   }, [setTypewriter, setOneLineEditor])
+
+  // A steady cursor if the player prefers reduced motion.
+  useEffect(() => {
+    oneLineEditor?.updateOptions({ cursorBlinking: reducedMotion ? 'solid' : 'blink' })
+  }, [oneLineEditor, reducedMotion])
 
   // Put a failed command back into the input so it can be corrected rather than retyped
   // (it is replaced when the next command is submitted). Don't overwrite anything typed since,

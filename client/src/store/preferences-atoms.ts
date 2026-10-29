@@ -9,6 +9,9 @@ export interface Preferences {
   useFlags: boolean
   showLockedInventory: boolean
   theme: "light" | "dark" | "system"
+  /** Animations: "system" follows the browser's `prefers-reduced-motion`, "reduce" turns them
+   * off, "full" keeps them. Missing in preferences saved by older versions. */
+  motion?: "system" | "reduce" | "full"
 }
 
 export function getWindowDimensions() {
@@ -27,6 +30,7 @@ const defaultPreferences: Preferences = {
   useFlags: false,
   showLockedInventory: true,
   theme: "system",
+  motion: "system",
 };
 
 const storage = createJSONStorage<Preferences>(() => localStorage)
@@ -94,5 +98,29 @@ export const darkModeAtom = atom(get => {
     case "dark": return true
     case "light": return false
     case "system": return get(systemDarkAtom)
+  }
+})
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)"
+
+/** Whether the operating system / browser asks for reduced motion */
+const systemReducedMotionAtom = atom(window.matchMedia?.(REDUCED_MOTION_QUERY).matches ?? false)
+systemReducedMotionAtom.onMount = set => {
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY)
+  const update = () => set(mq.matches)
+
+  update()
+  mq.addEventListener("change", update)
+
+  return () => mq.removeEventListener("change", update)
+}
+
+/** Whether to avoid animations (transitions, smooth scrolling, the blinking cursor in the
+ * typewriter): the "motion" preference, resolved against the system setting */
+export const reducedMotionAtom = atom(get => {
+  switch (get(preferencesAtom).motion ?? "system") {
+    case "reduce": return true
+    case "full": return false
+    case "system": return get(systemReducedMotionAtom)
   }
 })

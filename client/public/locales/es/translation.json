@@ -124,5 +124,14 @@
   "Impressum": "Aviso legal",
   "Privacy Policy": "Política de privacidad",
   "Close": "Cerrar",
-  "Menu": "Menú"
+  "Menu": "Menú",
+  "Hints": "Pistas",
+  "World map": "Mapa del mundo",
+  "completed": "completado",
+  "locked": "bloqueado",
+  "new": "nuevo",
+  "Command": "Comando",
+  "Animations": "Animaciones",
+  "Reduced (no transitions, no blinking cursor)": "Reducidas (sin transiciones ni cursor parpadeante)",
+  "Full": "Completas"
 }

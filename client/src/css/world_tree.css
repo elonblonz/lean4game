@@ -36,8 +36,18 @@ svg .level, svg .world {
   cursor: pointer;
 }
 
-svg .level:hover .level-title {
+svg .level:hover .level-title, svg .level:focus-visible .level-title {
   opacity: 1;
+}
+
+/* Keyboard focus on the map: a ring around the world or level. */
+svg .level:focus, svg .world:focus {
+  outline: none;
+}
+
+svg .level:focus-visible circle, svg .world:focus-visible .world-circle {
+  stroke: var(--clr-text);
+  stroke-width: 4;
 }
 
 svg .disabled {

@@ -111,5 +111,14 @@
   "Upload Saved Progress": "Téléverser la progression sauvegardée",
   "Load selected file": "Charger le fichier sélectionné",
   "Rules": "Règles",
-  "Proof": "Preuve"
+  "Proof": "Preuve",
+  "Hints": "Indices",
+  "World map": "Carte du monde",
+  "completed": "terminé",
+  "locked": "verrouillé",
+  "new": "nouveau",
+  "Command": "Commande",
+  "Animations": "Animations",
+  "Reduced (no transitions, no blinking cursor)": "Réduites (pas de transitions, curseur fixe)",
+  "Full": "Complètes"
 }

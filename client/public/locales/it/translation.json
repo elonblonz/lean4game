@@ -111,5 +111,14 @@
   "Load selected file": "Carica file selezionato",
   "Rules": "Regole",
   "Introduction": "",
-  "Proof": "Dimostrazione"
+  "Proof": "Dimostrazione",
+  "Hints": "Suggerimenti",
+  "World map": "Mappa dei mondi",
+  "completed": "completato",
+  "locked": "bloccato",
+  "new": "nuovo",
+  "Command": "Comando",
+  "Animations": "Animazioni",
+  "Reduced (no transitions, no blinking cursor)": "Ridotte (niente transizioni, cursore fisso)",
+  "Full": "Complete"
 }

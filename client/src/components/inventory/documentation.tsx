@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { Markdown } from "../markdown"
 import { closeDocAtom, docAtomFamily, docAtomLegacyFamily, inventoryAtom, InventoryTab, selectedDocTileAtom } from "../../store/inventory-atoms"
@@ -25,13 +25,25 @@ export function Documentation({ type } : {type : InventoryTab}) {
   const [{ data: docEntry }] = useAtom(docAtomFamily([type, docTile?.name ?? ""]))
   const [{ data: legacyDocEntry }] = useAtom(docAtomLegacyFamily([type, docTile?.name ?? ""]))
 
+  // Move the focus into the doc when it opens (e.g. from the keyboard), and back to where it was
+  // (the item) when it closes.
+  const docRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!docTile) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    docRef.current?.querySelector<HTMLElement>('.nav-button')?.focus()
+    return () => {
+      if (previousFocus?.isConnected) previousFocus.focus()
+    }
+  }, [docTile?.name])
+
   if (!docTile) return null
 
-  // Set `inventoryDoc` to `null` to close the doc
-
-  return <div className="documentation">
+  return <div className="documentation" ref={docRef} role="region" aria-label={docTile.displayName}
+      onKeyDown={ev => { if (ev.key === "Escape") { ev.stopPropagation(); closeDoc() } }}>
     <NavButton
       icon={faXmark}
+      title={t("Close")}
       onClick={closeDoc}
       inverted={true}
     />

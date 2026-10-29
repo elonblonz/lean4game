@@ -56,10 +56,12 @@ export function useLevelGameLogic() {
     }])
   }, [levelInfo?.template, editor, levelUri])
 
-  // Focus the editor when switching to editor mode.
+  // Focus the editor when switching to editor mode, and when it opens in editor mode (i.e. when
+  // a level is opened; in typewriter mode the command line takes the focus). Not on touch
+  // screens: there it would open the on-screen keyboard.
   useEffect(() => {
-    if (!typewriterMode) editor?.focus()
-  }, [typewriterMode])
+    if (!typewriterMode && editor && !window.matchMedia('(pointer: coarse)').matches) editor.focus()
+  }, [typewriterMode, editor])
 
   // In typewriter mode, the typewriter shows one command per line: drop empty lines. Only edit
   // if that changes something (an edit is a new version, which Lean then has to check again).

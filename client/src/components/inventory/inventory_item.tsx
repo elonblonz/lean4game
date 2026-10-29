@@ -44,12 +44,25 @@ export function InventoryItem({tile, isTheorem, recent=false, enableAll=false} :
     }, 3000);
   }
 
-return <div className={`item ${className}${enableAll ? ' enabled' : ''}${recent ? ' recent' : ''}`} onClick={handleClick} title={title}>
+  // For screen readers, the state that the icon and the colour show.
+  const state = (!enableAll && tile.locked) ? t("Not unlocked yet") : tile.disabled ? t("Not available in this level") :
+                tile.new ? t("new") : ''
+
+  return <div className={`item ${className}${enableAll ? ' enabled' : ''}${recent ? ' recent' : ''}`} onClick={handleClick} title={title}
+      role="button" tabIndex={0} aria-label={state ? `${tile.displayName} (${state})` : tile.displayName}
+      onKeyDown={ev => {
+        // Enter or Space opens the doc; not when pressed on the insert button inside.
+        if (ev.target === ev.currentTarget && (ev.key === "Enter" || ev.key === " ")) {
+          ev.preventDefault()
+          handleClick(ev)
+        }
+      }}>
     {icon} {tile.displayName}
     {insertable &&
     <button
         className="insert-button"
         title={t("insert '{{name}}'", { name: tile.displayName })}
+        aria-label={t("insert '{{name}}'", { name: tile.displayName })}
         onClick={insertItemName}
     >
       {inserted ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faReply} />}
