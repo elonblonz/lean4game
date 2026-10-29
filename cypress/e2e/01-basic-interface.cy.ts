@@ -55,15 +55,14 @@ describe('Basic Lean4game Interface', () => {
       it('landing page footer', () => {
         cy.visit('/#/')
         cy.get('footer').contains('a', 'Privacy Policy').should('be.visible').click()
-        cy.contains('a', 'Contact Details').should('have.attr', 'target', '_blank')
-        .then($a => {
-          const href = $a.prop('href')
-          cy.request(href).its('status').should('eq', 200)
-        })
+        // The operator's own page (`client/public/legal/privacy.md`).
+        cy.get('[role="dialog"]').should('contain', 'Our server collects metadata')
       })
     })
     describe('Rules', () => {
       it('can be opened from world tree', () => {
+        // Wide enough for the desktop layout, where the world map is on the first page.
+        cy.viewport(1280, 800)
         cy.visit('/#/g/test/TestGame')
         cy.get('.difficulty-label').find('.helpButton').should('be.visible').click()
         cy.contains('🔐')
