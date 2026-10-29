@@ -73,6 +73,10 @@ structure InventoryTemplate where
   displayName: String := name.toString
   /-- Template documentation. Allows for special tags to insert mathlib info [TODO!] -/
   content: String := ""
+  /-- Only for Tactics (optional): how a proof step using the tactic reads in a written proof,
+  e.g. `"Let {1} be arbitrary."`. The client fills in the placeholders (`{args}`, `{1}`, `{2}`, …,
+  `{1:type}`, `{goal}`, `{goalAfter}`, `{new}`) from the player's proof; see `TacticDoc`. -/
+  readsAs: Option String := none
   deriving ToJson, Repr, Inhabited
 
 /-- A full inventory item including the processing by `MakeGame`, which creates these
@@ -111,12 +115,15 @@ structure InventoryTile where
   hidden := false
   /-- hover text -/
   altTitle : String := default
+  /-- How a step using this tactic reads in a written proof (see `InventoryTemplate.readsAs`). -/
+  readsAs : Option String := none
 deriving ToJson, FromJson, Repr, Inhabited
 
 def InventoryItem.toTile (item : InventoryItem) : InventoryTile := {
       name := item.name,
       displayName := item.displayName
       category := item.category
+      readsAs := item.readsAs
 }
 
 /-- The extension that stores the doc templates. Note that you can only add, but never modify

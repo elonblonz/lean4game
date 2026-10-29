@@ -169,21 +169,38 @@ TacticDoc rw
 
 /-- `rw` stands for rewrite, etc. -/
 TacticDoc rw in "Equalities"
+
+/-- `intro x` introduces ... -/
+TacticDoc intro reads "Let {1} be arbitrary; it remains to show {goalAfter}."
 ```
 
 * The identifier is the tactics name. Some need to be escaped like `«have»`.
 * The description is a string supporting Markdown.
+* The optional string after `reads` says how a step using the tactic reads in a written proof
+  (the client shows the player's proof translated line by line). It supports Markdown and these
+  placeholders, which are filled in from the player's proof step (as code):
+  - `{args}`: everything after the tactic's name, e.g. `[h₁, h₂] at h` in `rw [h₁, h₂] at h`;
+  - `{1}`, `{2}`, …: the first, second, … argument (brackets like `[…]`, `⟨…⟩` count as one);
+  - `{1:type}`, `{2:type}`, …: the statement of the assumption (or the type of the object)
+    named by that argument, after the step, e.g. `x ∈ A` for `intro h`;
+  - `{goal}`: the goal before the step; `{goalAfter}`: the goal after it;
+  - `{new}`: the assumptions and objects the step introduced, e.g. `h : x ∈ A`.
+  Without `reads`, the written proof shows the step as code.
  -/
-elab doc:docComment ? "TacticDoc" name:ident inArg?:((" in " str)?) content:str ? : command => do
+elab doc:docComment ? "TacticDoc" name:ident inArg?:((" in " str)?)
+    readsArg?:((&" reads " str)?) content:str ? : command => do
   let doc ← parseDocCommentLegacy doc content
   let doc ← doc.translate
   let cat : String := if !inArg?.raw.isNone then (⟨inArg?.raw[1]⟩ : TSyntax `str).getString else "📖︎"
+  let readsAs : Option String ← if readsArg?.raw.isNone then pure none else
+    some <$> (⟨readsArg?.raw[1]⟩ : TSyntax `str).getString.translate
   modifyEnv (inventoryTemplateExt.addEntry · {
     type := .Tactic
     name := name.getId
     displayName := name.getId.toString
     category := cat
-    content := doc })
+    content := doc
+    readsAs := readsAs })
 
 /-- Documentation entry of a theorem. Example:
 
