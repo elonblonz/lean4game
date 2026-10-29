@@ -62,9 +62,20 @@ partial def findForbiddenTactics
       -- Catch "unknown constant" error
       catch | _ => pure []
     for n in ns do
-      let some (.thmInfo ..) := (← getEnv).find? n
-        -- Not a theorem, no checks needed.
-        | return ()
+      let env ← getEnv
+      let isTheorem := match env.find? n with
+        | some (.thmInfo ..) => true
+        | _ => false
+      if !isTheorem then
+        -- A definition declared in the level's own file is usually the answer to the
+        -- level (the file defines it after the `Statement` so later levels can use it).
+        if let some idx := env.getModuleIdxFor? n then
+          if env.header.moduleNames[idx.toNat]! == levelInfo.module then
+            logErrorAt stx m!"You can't use '{n}' in the level that defines it!"
+            continue
+        -- Other definitions are only checked if they are part of the game's inventory;
+        -- everything else (`id`, `Nat`, …) is always allowed.
+        unless levelInfo.definitions.any (·.name == n) do continue
       if some n = levelInfo.statementName then
         -- Forbid the theorem we are proving currently
         logErrorAt stx m!"Structural recursion: you can't use '{n}' to proof itself!"
