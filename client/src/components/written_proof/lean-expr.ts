@@ -7,6 +7,7 @@
  * Only the notation used in set theory is understood; anything else is kept as it is.
  */
 
+export type Expr = Node
 type Node =
   | { kind: 'atom', text: string }
   | { kind: 'bin', op: string, left: Node, right: Node }
@@ -158,7 +159,8 @@ function atomTex(text: string): string {
 
 const isBin = (n: Node, ops?: Set<string>) => n.kind === 'bin' && (!ops || ops.has(n.op))
 
-function tex(n: Node): string {
+/** An expression in LaTeX. */
+export function tex(n: Node): string {
   switch (n.kind) {
     case 'atom': return atomTex(n.text)
     case 'compl': {
@@ -213,14 +215,124 @@ function needsParens(parent: Node & { kind: 'bin' }, child: Node, side: 'left' |
   return isBin(child)
 }
 
-/** An expression as Lean prints it, in LaTeX; `undefined` if it isn't understood. */
-export function exprToLatex(expr: string): string | undefined {
+/** An expression (or proof term) as Lean prints it, parsed; `undefined` if it isn't understood. */
+export function parse(expr: string): Node | undefined {
   try {
     const p = new Parser(tokenize(expr))
     const n = p.expr(0)
-    if (!p.done()) return undefined
-    return tex(n)
+    return p.done() ? n : undefined
   } catch {
     return undefined
   }
+}
+
+/** An expression as Lean prints it, in LaTeX; `undefined` if it isn't understood. */
+export function exprToLatex(expr: string): string | undefined {
+  const n = parse(expr)
+  return n && tex(n)
+}
+
+export const atom = (text: string): Node => ({ kind: 'atom', text })
+export const bin = (op: string, left: Node, right: Node): Node => ({ kind: 'bin', op, left, right })
+
+/** Whether two expressions are the same (up to Lean's ways of writing negation). */
+export function equal(a: Node, b: Node): boolean {
+  a = normalize(a); b = normalize(b)
+  if (a.kind !== b.kind) return false
+  switch (a.kind) {
+    case 'atom': return a.text === (b as typeof a).text
+    case 'bin': { const c = b as typeof a; return a.op === c.op && equal(a.left, c.left) && equal(a.right, c.right) }
+    case 'not': case 'compl': return equal(a.arg, (b as typeof a).arg)
+    case 'prefix': { const c = b as typeof a; return a.op === c.op && equal(a.arg, c.arg) }
+    case 'binder': {
+      const c = b as typeof a
+      return a.op === c.op && a.vars.length === c.vars.length && a.vars.every((v, i) => equal(v, c.vars[i])) &&
+        !!a.bound === !!c.bound && (!a.bound || (a.bound.op === c.bound!.op && equal(a.bound.set, c.bound!.set))) &&
+        equal(a.body, c.body)
+    }
+    case 'set': { const c = b as typeof a; return a.items.length === c.items.length && a.items.every((x, i) => equal(x, c.items[i])) }
+    case 'builder': { const c = b as typeof a; return equal(a.v, c.v) && equal(a.body, c.body) }
+    case 'app': { const c = b as typeof a; return equal(a.fn, c.fn) && equal(a.arg, c.arg) }
+  }
+}
+
+/** `x ∉ A` as `¬(x ∈ A)` (and `⊈`, `≠` likewise), so that both forms compare equal. */
+function normalize(n: Node): Node {
+  if (n.kind === 'bin' && (n.op === '∉' || n.op === '⊈' || n.op === '≠'))
+    return { kind: 'not', arg: { ...n, op: n.op === '∉' ? '∈' : n.op === '⊈' ? '⊆' : '=' } }
+  return n
+}
+
+/** The negated statement of `¬P`, `x ∉ A`, `A ⊈ B` or `a ≠ b`, if `n` is one. */
+export function negated(n: Node): Node | undefined {
+  const m = normalize(n)
+  return m.kind === 'not' ? m.arg : undefined
+}
+
+/** `n` with the free occurrences of the variable `name` replaced by `by`. */
+export function substitute(n: Node, name: string, by: Node): Node {
+  const s = (m: Node) => substitute(m, name, by)
+  switch (n.kind) {
+    case 'atom': return n.text === name ? by : n
+    case 'bin': return { ...n, left: s(n.left), right: s(n.right) }
+    case 'not': case 'compl': case 'prefix': return { ...n, arg: s(n.arg) }
+    case 'set': return { ...n, items: n.items.map(s) }
+    case 'app': return { ...n, fn: s(n.fn), arg: s(n.arg) }
+    case 'builder': return n.v.kind === 'atom' && n.v.text === name ? n : { ...n, body: s(n.body) }
+    case 'binder': {
+      const bound = n.bound && { op: n.bound.op, set: s(n.bound.set) }
+      const shadowed = n.vars.some(v => v.kind === 'atom' && v.text === name)
+      return { ...n, bound, body: shadowed ? n.body : s(n.body) }
+    }
+  }
+}
+
+const inline = (n: Node) => `$${tex(n)}$`
+
+/**
+ * A statement in words, with the formulas in `$...$`: "$x \in A$ or $x \in B$",
+ * "for every $t \in F$, $x \in t$". Logic inside logic gets "both ... and" / "either ... or";
+ * deeper nesting stays in symbols.
+ */
+export function words(n: Node, depth = 0): string {
+  // Statements with logic nested three deep read better in symbols.
+  if (depth >= 2 || (depth === 0 && logicDepth(n) > 2)) return inline(n)
+  const w = (m: Node) => words(m, depth + 1)
+  if (n.kind === 'atom' && n.text === 'False') return 'a contradiction'
+  if (n.kind === 'bin') {
+    switch (n.op) {
+      // With logic inside, "either ..., or ..." keeps the grouping clear.
+      case '∧': return depth ? `both ${w(n.left)} and ${w(n.right)}`
+        : logicDepth(n.left) || logicDepth(n.right) ? `${w(n.left)}, and ${w(n.right)}` : `${w(n.left)} and ${w(n.right)}`
+      case '∨': return depth ? `either ${w(n.left)} or ${w(n.right)}`
+        : logicDepth(n.left) || logicDepth(n.right) ? `either ${w(n.left)}, or ${w(n.right)}` : `${w(n.left)} or ${w(n.right)}`
+      case '→': return `if ${w(n.left)} then ${w(n.right)}`
+      case '↔': return `${w(n.left)} if and only if ${w(n.right)}`
+    }
+  }
+  if (n.kind === 'not') {
+    const a = n.arg
+    if (a.kind === 'bin' && NEGATED[a.op]) return inline(n)
+    return `it is not the case that ${w(a)}`
+  }
+  if (n.kind === 'binder') {
+    const vars = n.vars.map(tex).join(', ')
+    const v = n.bound ? `$${vars} ${TEX_OP[n.bound.op]} ${tex(n.bound.set)}$` : `$${vars}$`
+    return n.op === '∀' ? `for every ${v}, ${w(n.body)}` : `there is some ${v} such that ${w(n.body)}`
+  }
+  return inline(n)
+}
+
+/** How deeply `∧`, `∨`, `→`, `↔`, `¬` and quantifiers are nested (`x ∉ A` counts as 0). */
+function logicDepth(n: Node): number {
+  if (n.kind === 'bin' && LOGIC_OPS.has(n.op)) return 1 + Math.max(logicDepth(n.left), logicDepth(n.right))
+  if (n.kind === 'not') return n.arg.kind === 'bin' && NEGATED[n.arg.op] ? 0 : 1 + logicDepth(n.arg)
+  if (n.kind === 'binder') return 1 + logicDepth(n.body)
+  return 0
+}
+
+/** What a statement means, where that helps: `A ⊆ B` is "every element of A is an element of B". */
+export function meaning(n: Node): string | undefined {
+  if (n.kind === 'bin' && n.op === '⊆') return `every element of ${inline(n.left)} is an element of ${inline(n.right)}`
+  return undefined
 }

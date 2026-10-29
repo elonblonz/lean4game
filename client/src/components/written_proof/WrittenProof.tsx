@@ -8,32 +8,55 @@ import { Markdown } from '../markdown'
 import { Button } from '../button'
 import { useGameTranslation } from '../../utils/translation'
 import { proofAtom } from '../../store/editor-atoms'
+import { selectedStepAtom } from '../../store/chat-atoms'
+import { mobileAtom } from '../../store/preferences-atoms'
 import { gameInfoAtom, levelInfoAtom } from '../../store/query-atoms'
 import { levelIdAtom, worldIdAtom } from '../../store/location-atoms'
-import { ProofBlock, toLatexDocument, writtenProof } from './written-proof'
+import { Line, toLatexDocument, writtenProof } from './written-proof'
 import '../../css/written_proof.css'
 
-/** Sentences next to each other form one paragraph; sub-proofs are indented. `lead` starts
- * the first paragraph (as "*Proof.*" does in a book). */
-function Block({ block, lead }: { block: ProofBlock, lead?: string }) {
-  const parts: React.ReactNode[] = []
-  let para: string[] = lead ? [lead] : []
-  const flush = () => {
-    if (para.length) parts.push(<Markdown key={parts.length}>{para.join(' ')}</Markdown>)
-    para = []
+/** The lines of a written proof. Clicking a line selects the tactic step it comes from, and
+ * the lines of the selected step are highlighted. */
+function Lines({ lines }: { lines: Line[] }) {
+  const { t } = useTranslation()
+  const [selectedStep, setSelectedStep] = useAtom(selectedStepAtom)
+  const [mobile] = useAtom(mobileAtom)
+  const select = (step?: number) => (ev: React.MouseEvent) => {
+    ev.stopPropagation()
+    if (step === undefined) return
+    const line = ev.currentTarget as HTMLElement
+    setSelectedStep(selectedStep === step ? undefined : step)
+    // Selecting a step scrolls the chat to that step's hints: keep this line in view instead,
+    // and show the step in the proof (on a phone the proof is above, so don't jump there).
+    setTimeout(() => {
+      if (!mobile) document.querySelector(`.proof .step-${step}`)?.scrollIntoView({ block: 'nearest' })
+      line.scrollIntoView({ block: 'nearest' })
+    }, 50)
   }
-  for (const item of block.items) {
-    if (typeof item === 'string') { para.push(item); continue }
-    flush()
-    parts.push(
-      <div key={parts.length} className="written-proof-part">
-        {item.label && <Markdown>{`**${item.label}**`}</Markdown>}
-        <Block block={item} />
-      </div>
-    )
-  }
-  flush()
-  return <>{parts}</>
+  const selected = (step?: number) => step !== undefined && step === selectedStep ? ' selected' : ''
+
+  return <>{lines.map((l, i) => {
+    switch (l.kind) {
+      case 'fact':
+        return <div key={i} className={`written-proof-fact${selected(l.step)}`} onClick={select(l.step)}
+            title={t('Show the step of your proof this comes from')}>
+          <span className="written-proof-n">{l.n}.</span>
+          <span className="written-proof-text"><Markdown>{l.text}</Markdown></span>
+          <span className="written-proof-why"><Markdown>{`[${l.why}]`}</Markdown></span>
+        </div>
+      case 'note':
+        return <div key={i} className={`written-proof-note${selected(l.step)}`} onClick={select(l.step)}>
+          <Markdown>{l.text}</Markdown>
+        </div>
+      case 'block':
+        return <div key={i} className="written-proof-block">
+          {l.header && <div className={`written-proof-header${selected(l.step)}`} onClick={select(l.step)}>
+            <Markdown>{l.header}</Markdown>
+          </div>}
+          <Lines lines={l.lines} />
+        </div>
+    }
+  })}</>
 }
 
 /** The completed proof, written out as a mathematician would write it, with LaTeX export. */
@@ -50,7 +73,11 @@ export function WrittenProof() {
   const written = useMemo(() => {
     if (!proof?.completed || !levelInfo) return undefined
     try {
-      return writtenProof(proof, { title: gT(levelInfo.title ?? ''), descrText: gT(levelInfo.descrText ?? '') || null })
+      return writtenProof(proof, {
+        title: gT(levelInfo.title ?? ''),
+        descrText: gT(levelInfo.descrText ?? '') || null,
+        theorems: levelInfo.lemmas.map(l => ({ name: l.name, displayName: l.displayName })),
+      })
     } catch (e) {
       console.warn('written proof:', e)
       return undefined
@@ -81,7 +108,8 @@ export function WrittenProof() {
       <Markdown>{`**${t('Theorem.')}** ${written.statement}`}</Markdown>
     </div>
     <div className="written-proof-body">
-      <Block block={written.proof} lead={`*${t('Proof.')}*`} />
+      <Markdown>{`*${t('Proof.')}*`}</Markdown>
+      <Lines lines={written.lines} />
       <div className="written-proof-qed" aria-hidden="true">∎</div>
     </div>
     <div className="written-proof-actions">

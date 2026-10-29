@@ -2,7 +2,7 @@
 .written-proof {
   margin: 10px 0;
   padding: .6em .9em .7em;
-  border: 1px solid var(--clr-border-subtle, var(--clr-border));
+  border: 1px solid var(--clr-border);
   border-left: 3px solid var(--clr-primary);
   border-radius: var(--radius-sm, 4px);
   background: var(--clr-surface);
@@ -19,22 +19,66 @@
   margin: 0;
 }
 
-.written-proof .markdown + .markdown,
-.written-proof .markdown + .written-proof-part,
-.written-proof-part + .markdown,
-.written-proof-part + .written-proof-part {
-  margin-top: .45em;
-}
-
 .written-proof-theorem {
   margin-bottom: .5em;
 }
 
-/* Cases, directions and claims. */
-.written-proof-part {
-  margin-left: .2em;
-  padding-left: .8em;
+/* A numbered line: number, statement, and the justification on the right (below it if
+   there is no room). */
+.written-proof-fact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: .5em;
+  padding: .12em .25em;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.written-proof-n {
+  flex: 0 0 1.8em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--clr-text-secondary);
+}
+.written-proof-text {
+  flex: 1 1 6em;
+  min-width: 0;
+}
+.written-proof-why {
+  margin-left: auto;
+  padding-left: 2.3em;
+  font-size: .88em;
+  color: var(--clr-text-secondary);
+  text-align: right;
+}
+
+/* Explanations: how we go about it, what is left to show. */
+.written-proof-note {
+  padding: .12em .25em .12em 2.55em;
+  border-radius: 4px;
+  font-style: italic;
+  color: var(--clr-text-secondary);
+  cursor: pointer;
+}
+
+/* A part of the proof with its own assumptions. */
+.written-proof-block {
+  margin: .15em 0 .15em 1.3em;
+  padding-left: .5em;
   border-left: 2px solid var(--clr-surface-strong);
+}
+.written-proof-header {
+  padding: .12em .25em;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.written-proof .selected {
+  background: var(--clr-info-bg);
+}
+.written-proof-fact:hover, .written-proof-note:hover, .written-proof-header:hover {
+  background: var(--clr-surface-subtle);
 }
 
 .written-proof-qed {
