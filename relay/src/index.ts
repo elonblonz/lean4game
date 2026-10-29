@@ -245,6 +245,19 @@ webSocketServer.addListener("connection", (ws, req) => {
 })
 //webSocketServer.on("connection", (ws, req) => { observerService.startObservedGame(ws, req) })
 
+// Start spare Lean servers, so that the first players don't wait for one to start.
+gameManager.startPool()
+
+// Don't leave Lean servers running when the relay stops (`nodemon` restarts it with SIGUSR2).
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGUSR2'] as const) {
+  process.once(signal, () => {
+    console.log(`[${new Date()}] Received ${signal}, stopping the Lean servers`)
+    gameManager.shutdown()
+    process.exit(0)
+  })
+}
+process.once('exit', () => gameManager.shutdown())
+
 /**
  * Start local express instance that provides API for server statistics
  */

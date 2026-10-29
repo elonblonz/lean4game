@@ -39,6 +39,14 @@ Environment variables of the relay (`relay/src`):
 - `API_PORT`: the port of the statistics API. It only listens on `127.0.0.1`, and only if set.
 - `RESERVED_DISC_SPACE_MB`: imports are refused if they would leave less free disk space than
   this (default: 1024).
+- `LEAN_POOL_SIZE`: how many spare Lean servers to keep started per game, so that a new player
+  does not wait for one to start (default: 1 in development, 0 in production; `0` disables the
+  pool). A spare has not imported the game yet, so it saves the start of the server (about a
+  second), not the import. Spares need memory too (about 1 GB each before a level is opened)
+  and do not count towards `MAX_SESSIONS`. They are stopped when the relay stops.
+- `LEAN_POOL_GAMES`: the games to keep spares for, comma separated as `owner/repo` (default: in
+  development the local games next to `lean4game`, played as `local/<folder>`; in production
+  a few popular games).
 
 Lean runs the players' proofs, and Lean code can run programs. In production, Lean runs inside
 `bubblewrap` (`relay/scripts/bubblewrap.sh`: no network, read-only game files, a CPU time limit).

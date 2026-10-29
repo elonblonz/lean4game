@@ -12,32 +12,48 @@ export type GameSession = {
   process: ChildProcess,
   game: string,
   gameDir: string,
-  usesCustomLeanServer: boolean
+  usesCustomLeanServer: boolean,
+  /** When the Lean server was started, and whether it was a spare from the pool. */
+  startedAt: number,
+  fromPool: boolean
 }
 const environment = process.env.NODE_ENV;
 const isDevelopment = environment === 'development';
 const noBwrap = process.env.NO_BWRAP == "true"
 
+/**
+ * Spare Lean servers to keep ready per game (`LEAN_POOL_SIZE`, `0` disables the pool).
+ * A spare has started `lake serve` but not opened a level yet, so this saves the start of the
+ * server, not the import of the game. Default: 1 in development, 0 in production.
+ */
+const poolSizeSetting = parseInt(process.env.LEAN_POOL_SIZE ?? '')
+const POOL_SIZE = Number.isNaN(poolSizeSetting) ? (isDevelopment ? 1 : 0) : Math.max(0, poolSizeSetting)
+/**
+ * The games to keep spares for (`LEAN_POOL_GAMES`, comma separated `owner/repo`).
+ * Default: in development the local games, in production a few popular games.
+ */
+const POOL_GAMES = (process.env.LEAN_POOL_GAMES ?? '').split(',').map(s => s.trim()).filter(s => s)
+const DEFAULT_PRODUCTION_POOL_GAMES = [
+  "hhu-adam/robo",
+  "leanprover-community/nng4",
+  "djvelleman/stg4",
+  "trequetrum/lean4game-logic",
+]
+
 export class GameManager {
-  queueLength: {}
-  queue: {}
+  /** Spare Lean server processes per game (by tag), ready for the next player. */
+  queue: { [tag: string]: ChildProcess[] }
+  /** Every Lean server process we started that is still running (spares and sessions). */
+  processes: Set<ChildProcess>
+  /** When each of these processes was started. */
+  startTimes: WeakMap<ChildProcess, number>
   urlRegEx: RegExp
   dir: string
 
   constructor(directory: string) {
-    /**
-     * Add a game here if the server should keep a queue of pre-loaded games ready at all times.
-     *
-     * IMPORTANT! Tags here need to be lower case!
-    */
-    this.queueLength = {
-      "g/hhu-adam/robo": 2,
-      "g/leanprover-community/nng4": 5,
-      "g/djvelleman/stg4": 2,
-      "g/trequetrum/lean4game-logic": 2,
-    };
-    /** We keep queues of started Lean Server processes to be ready when a user arrives */
     this.queue = {};
+    this.processes = new Set();
+    this.startTimes = new WeakMap();
     this.urlRegEx = /^\/websocket\/g\/([\w.-]+)\/([\w.-]+)$/;
     this.dir = directory
   }
@@ -52,15 +68,17 @@ export class GameManager {
     const game = `${reResTag.owner}/${reResTag.repo}`
     const customLeanServer = this.getCustomLeanServer(reResTag.owner, reResTag.repo)
 
-    if (!this.queue[tag] || this.queue[tag].length == 0) {
-      ps = this.createGameProcess(reResTag.owner, reResTag.repo, customLeanServer);
-      // TODO (Matvey): extract further information from `req`, for example browser language.
-      console.log(`[${new Date()}] Socket opened by ${ip} on ${game}`);
+    // TODO (Matvey): extract further information from `req`, for example browser language.
+    console.log(`[${new Date()}] Socket opened by ${ip} on ${game}`);
+    const spare = this.queue[tag]?.shift()  // the oldest spare is the most likely to be ready
+    if (spare) {
+      console.info(`[${new Date()}] Using a spare Lean server for ${game}`)
+      ps = spare
     } else {
-      console.info('Got process from the queue');
-      ps = this.queue[tag].shift(); // Pick the first Lean process; it's likely to be ready immediately
-      this.fillQueue(reResTag);
+      ps = this.createGameProcess(reResTag.owner, reResTag.repo, customLeanServer);
     }
+    // Replace the spare (or one that died) if the game is in the pool.
+    if (this.queue[tag]) this.fillQueue(reResTag)
 
     if (ps == null) {
       console.error(`[${new Date()}]server process is undefined/null`);
@@ -69,7 +87,48 @@ export class GameManager {
 
     const gameDir = this.getGameDir(reResTag.owner, reResTag.repo)
 
-    return {process: ps, game: game, gameDir: gameDir, usesCustomLeanServer: customLeanServer !== null }
+    return {process: ps, game: game, gameDir: gameDir, usesCustomLeanServer: customLeanServer !== null,
+      startedAt: this.startTimes.get(ps) ?? Date.now(), fromPool: spare !== undefined }
+  }
+
+  /** Start the spare Lean servers of the games in the pool (see `POOL_SIZE`). */
+  startPool() {
+    if (POOL_SIZE == 0) return
+    let games = POOL_GAMES
+    if (games.length == 0) {
+      games = isDevelopment ? this.getLocalGames().map(repo => `local/${repo}`) : DEFAULT_PRODUCTION_POOL_GAMES
+    }
+    for (const game of games) {
+      const [owner, repo] = game.split('/', 2)
+      if (!owner || !repo || !this.getGameDir(owner, repo)) {
+        console.warn(`[${new Date()}] Not keeping spare Lean servers for unknown game ${game}`)
+        continue
+      }
+      console.info(`[${new Date()}] Keeping ${POOL_SIZE} spare Lean server(s) for ${game}`)
+      this.fillQueue({ owner, repo })
+    }
+  }
+
+  /** The games next to the `lean4game` folder, played as `g/local/<folder>` in development. */
+  getLocalGames(): string[] {
+    const baseDir = path.join(this.dir, '..', '..', '..', '..')
+    try {
+      return fs.readdirSync(baseDir, { withFileTypes: true })
+        .filter(e => e.isDirectory() && /^[A-Za-z0-9_.-]+$/.test(e.name) &&
+          fs.existsSync(path.join(baseDir, e.name, '.lake', 'gamedata', 'game.json')))
+        .map(e => e.name)
+    } catch (e) {
+      console.error(`[${new Date()}] Could not look for local games in ${baseDir}: ${e}`)
+      return []
+    }
+  }
+
+  /** Stop all Lean servers we started (spares and sessions), e.g. when the relay shuts down. */
+  shutdown() {
+    this.queue = {}
+    for (const ps of this.processes) {
+      try { ps.kill() } catch (e) { /* already gone */ }
+    }
   }
 
   getCustomLeanServer(owner, repo) : string | null {
@@ -150,6 +209,15 @@ export class GameManager {
         { cwd: this.dir });
     }
 
+    this.startTimes.set(serverProcess, Date.now())
+    this.processes.add(serverProcess)
+    serverProcess.on('exit', () => {
+      this.processes.delete(serverProcess)
+      // A spare that died (e.g. killed from outside) must not be handed to a player.
+      for (const tag in this.queue) {
+        this.queue[tag] = this.queue[tag].filter(ps => ps !== serverProcess)
+      }
+    })
     serverProcess.on('error', error => console.error(`[${new Date()}] Launching Lean Server failed: ${error}`));
     if (serverProcess.stderr !== null) {
       serverProcess.stderr.on('data', data => console.error(`[${new Date()}] Lean Server: ${data}`)
@@ -163,7 +231,8 @@ export class GameManager {
    */
   fillQueue(tag: { owner: string; repo: string; }) {
     const tagString = this.getTagString(tag);
-    while (this.queue[tagString].length < this.queueLength[tagString]) {
+    this.queue[tagString] ??= []
+    while (this.queue[tagString].length < POOL_SIZE) {
       let serverProcess: cp.ChildProcessWithoutNullStreams;
       serverProcess = this.createGameProcess(
         tag.owner, tag.repo,
