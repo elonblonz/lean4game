@@ -1,8 +1,10 @@
 
+/* Hints, conclusions and Lean messages as soft cards. */
 .message {
   margin: 10px 0;
-  padding: 5px 10px;
-  border-radius: 3px 3px 3px 3px;
+  padding: .7em 1em;
+  border-radius: var(--radius);
+  line-height: 1.55;
 }
 .message.information, .message.info {
   /* color: #059; */
@@ -59,24 +61,11 @@
   font-weight: 500;
 }
 
-.level-completed {
-  font-size: 1.8rem;
-  font-weight: 500;
-  padding-left: .5em;
-  padding-right: .5em;
-  padding-top: .2em;
-  padding-bottom: .2em;
-  border-radius: .5em;
-  background-color: var(--clr-surface-sunken);
-
-}
-
 .typewriter {
   background: var(--clr-primary);
   padding: 0.5em;
   font-family: var(--ff-primary);
-  border-radius: 0.2em;
-  /* margin: 0.2em 0 0; */
+  border-radius: var(--radius);
 }
 
 .typewriter.disabled{
@@ -111,6 +100,7 @@
 }
 
 .typewriter .typewriter-input-wrapper{
+  border-radius: var(--radius-sm);
   min-width: 0;
   flex: 1;
   padding: 0.2em .6em;
@@ -121,13 +111,6 @@
   justify-content: center;
   align-items: stretch;
   min-height: var(--typewriter-control-height);
-}
-
-.typewriter-interface .proof .MuiCircularProgress-root {
-  left: 50%;
-  position: relative;
-  margin-left: -20px;
-  margin-bottom: 0.6em;
 }
 
 .typewriter .typewriter-input {
@@ -170,45 +153,6 @@
   margin-left: 0.8em;
 }
 
-.proof-display {
-  max-height: 6em;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scroll-snap-type: y proximity;
-  color: var(--clr-history-5);
-
-}
-
-.proof-display div:nth-last-child(4) {
-  color: var(--clr-history-4);
-}
-
-.proof-display div:nth-last-child(3) {
-  color: var(--clr-history-3);
-}
-
-.proof-display div:nth-last-child(2) {
-  color: var(--clr-history-2);
-}
-
-.proof-display div:nth-last-child(1) {
-  color: var(--clr-history-1);
-  scroll-snap-align: end;
-}
-
-.proof-display-wrapper {
-  background-color: var(--clr-surface-subtle);
-  border-radius: 1em;
-  padding: 0.6em;
-}
-
-
-/* Push the goals to the bottom for now, until we insert the proof history above. */
-.typewriter-interface .content {
-  display: flex;
-  flex-direction: column;
-  scroll-behavior: smooth;
-}
 
 /* TODO this is in the wrong file */
 .chat {
@@ -217,8 +161,8 @@
 
 .exercise .command {
   background-color: var(--clr-surface-strong);
-  padding: .5em;
-  border-radius: .2em;
+  padding: .4em;
+  border-radius: var(--radius);
   /* TODO: It seems my browsers merge the margings of the proof steps,
   so that it only shows once 0.5rem instead of twice. Thus have 1.5 here now.
   */
@@ -230,8 +174,8 @@
 
 .exercise .failed-command {
   background-color: var(--clr-surface-sunken);
-  padding: .5em;
-  border-radius: .2em;
+  padding: .4em;
+  border-radius: var(--radius);
   /* TODO: It seems my browsers merge the margings of the proof steps,
   so that it only shows once 0.5rem instead of twice. Thus have 1.5 here now.
   */
@@ -242,6 +186,7 @@
 
 .exercise .command-text {
   flex: 1;
+  border-radius: var(--radius-sm);
   background-color: var(--clr-surface);
   font-size: 14px;
   padding: 0.4em .6em 0;
@@ -250,13 +195,7 @@
 .undo-button {
   color: var(--clr-text-subtle);
   background-color: var(--clr-surface);
-}
-
-.crashed_message {
-  color: var(--clr-error-text);
-  font-weight: bold;
-  padding-left: .5em;
-  padding-right: .5em;
+  border-radius: var(--radius-sm);
 }
 
 /* Apparently this prevents the layout from jumping around when hovering over expressions. */

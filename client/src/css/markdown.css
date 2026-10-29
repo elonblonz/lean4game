@@ -1,0 +1,42 @@
+/* Text in hints, conclusions, intros and docs (rendered Markdown, inside `.markdown` or a
+   `.message`). `reset.css` sets `font: inherit` on everything, so restore what Markdown needs.
+   Loaded after the layout files (see `app.tsx`), so that these win over rules like `.exercise h4`. */
+:is(.markdown, .message) :is(strong, b) {
+  font-weight: 650;
+}
+
+:is(.markdown, .message) h1, :is(.markdown, .message) h2, :is(.markdown, .message) h3, :is(.markdown, .message) h4 {
+  font-weight: 650;
+  line-height: 1.25;
+  margin: .9em 0 .4em;
+}
+:is(.markdown, .message) h1 { font-size: 1.35em; }
+:is(.markdown, .message) h2 { font-size: 1.2em; }
+:is(.markdown, .message) h3 { font-size: 1.08em; }
+:is(.markdown, .message) h4 { font-size: 1em; color: var(--clr-text-secondary); }
+:is(.markdown, .message) > :first-child { margin-top: 0; }
+
+:is(.markdown, .message) p + p, :is(.markdown, .message) p + ul, :is(.markdown, .message) ul + p, :is(.markdown, .message) p + ol, :is(.markdown, .message) ol + p,
+:is(.markdown, .message) blockquote + p, :is(.markdown, .message) p + blockquote {
+  margin-top: .6em;
+}
+
+:is(.markdown, .message) ul, :is(.markdown, .message) ol {
+  padding-left: 1.4em;
+}
+:is(.markdown, .message) li + li {
+  margin-top: .25em;
+}
+
+/* Used for the "written out" proofs in conclusions. */
+:is(.markdown, .message) blockquote {
+  margin: .6em 0;
+  padding: .5em .9em;
+  border-left: 3px solid var(--clr-primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: color-mix(in srgb, var(--clr-surface) 70%, transparent);
+  color: var(--clr-text);
+}
+:is(.markdown, .message) blockquote p + p {
+  margin-top: .5em;
+}

@@ -37,31 +37,6 @@
   margin-bottom: 0;
 }
 
-.input-mode-switch {
-  margin: 0;
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
-  gap: 1em;
-}
-
-.doc-panel {
-  background: var(--clr-surface-muted);
-}
-
-.doc-panel li {
-  border-bottom: 1px solid var(--clr-divider); /* This should be teh same colour as `divider` in Inventory.tsx */
-}
-
-.doc-panel li:first-of-type {
-  border-top: 1px solid var(--clr-divider); /* This should be teh same colour as `divider` in Inventory.tsx */
-}
-
-/* fix as Mui seems to set this to `nowrap`. */
-.MuiAccordionDetails-root {
-  white-space: normal;
-}
-
 /* TODO: Adjust Mathjax styling. 1em vertical is excessive. */
 mjx-container[jax="CHTML"][display="true"] {
   margin: 0.2em 0 !important;
@@ -115,38 +90,6 @@ td code  {
 .glyph-margin-error {
   background: var(--clr-gutter-error);
 }
-
-/***************************************/
-/* TODO: For development purposes only */
-/***************************************/
-/* .doc-panel {
-  border: 1px solid red;
-}
-
-.main-panel {
-  border: 1px solid rgb(41, 112, 0);
-}
-
-.info-panel {
-  border: 1px solid rgb(230, 122, 0);
-}
-
-.chat-panel {
-  border: 1px solid rgb(192, 18, 178);
-}
-
-.exercise {
-  border: 1px solid rgb(102, 243, 67);
-}
-
-.codeview {
-  border: 1px solid rgb(98, 148, 255);
-}
-
-.main-grid {
-  border: 1px solid rgb(255, 0, 0);
-  margin: 1px;
-} */
 
 .exercise {
 }
@@ -244,19 +187,8 @@ td code  {
 }
 
 
-.typewriter-interface {
-  display: flex;
-  flex-flow: column;
-}
-
 .typewriter {
   flex: 0 1 auto;
-}
-
-.typewriter-interface .content {
-  flex: 1 1 auto;
-  overflow-y: scroll;
-  padding: 0;
 }
 
 .exercise .step {
@@ -268,12 +200,9 @@ td code  {
   /* border: 3px dotted rgb(88, 131, 24); */
 }
 
-/* TODO: Is this still used anywhere? */
-.exercise .step .btn-help {
-  margin-top: 10px;
-}
-
 .chat .message {
+  margin-top: .75em;
+  margin-bottom: .75em;
   margin-left: .5em;
   margin-right: .5em;
   overflow-x: auto;
@@ -286,13 +215,6 @@ td code  {
 .exercise .step.selected .goal-tabs, .chat .selected {
   /* border: 3px solid #5191d1; */
   box-shadow: .0em .0em .4em .1em var(--clr-primary);
-}
-
-.introduction-panel {
-  max-width: 900px;
-  width: 80%;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .impressum {
@@ -347,16 +269,7 @@ td code  {
   display: none;
 }
 
-/* DEBUG */
-/* .proof .step {
-  border: 2px solid rgb(0, 123, 255);
-} */
-
 .nav-btns {
   height: 2rem;
 }
 
-.nav-btns .language-btn {
-  background: var(--clr-info-bg);
-  text-align: center;
-}

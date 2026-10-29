@@ -8,6 +8,9 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 
+// The global stylesheets, in this order (later ones win). Components import theirs too, which
+// doesn't change the order: a stylesheet goes where it is first imported.
+import './css/tokens.css';
 import './css/reset.css';
 import './css/app.css';
 import './css/error_page.css';
@@ -20,7 +23,8 @@ import "./css/tab_bar.css"
 import "./css/typewriter.css"
 import "./css/welcome.css"
 import "./css/world_tree.css"
-import "./css/modern.css"
+import "./css/markdown.css"
+import "./css/inventory.css"
 
 import i18n from './i18n';
 import { Popup } from './components/popup/popup';
@@ -32,7 +36,7 @@ import { gameInfoAtom } from './store/query-atoms';
 import { hashSegmentsAtom } from './store/location-atoms';
 import { langNavOpenAtom, navOpenAtom } from './store/navigation-atoms';
 
-/** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `app.css`. */
+/** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `css/tokens.css`. */
 const DARK_BACKGROUND = '#1e2127'
 const DARK_SURFACE = '#252830'
 const DARK_TEXT = '#e6e8ec'
@@ -79,7 +83,7 @@ function App({ children }: { children?: React.ReactNode }) {
     // fails with "Services are already initialized". A new instance replaces the old one.
   }, [leanMonacoOptions, setLeanMonaco])
 
-  // Switch the CSS colour tokens (see `app.css`) before the browser paints.
+  // Switch the CSS colour tokens (see `css/tokens.css`) before the browser paints.
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light"
   }, [darkMode])

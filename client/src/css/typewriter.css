@@ -83,9 +83,17 @@
   object-fit: cover;
 }
 
+/* The world images (e.g. the Venn diagrams) are drawn for a white page. In dark mode, invert
+   their lightness but keep their hues, so they don't show as bright white cards. */
+:root[data-theme="dark"] .world-image {
+  filter: invert(.9) hue-rotate(180deg);
+}
+
+/* The proof: the statement and the entered commands, above the command line. */
 .typewriter-info .proof {
   background-color: var(--clr-surface);
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .proof {

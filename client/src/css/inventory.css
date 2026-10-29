@@ -87,6 +87,11 @@
   padding-top: .125rem;
   padding-bottom: .125rem;
   position: relative;
+  transition: background-color .15s;
+}
+
+.inventory .item:hover {
+  background: var(--clr-surface-subtle);
 }
 
 .inventory .item.locked:not(.enabled) {

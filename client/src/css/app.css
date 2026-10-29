@@ -2,196 +2,6 @@ html {
   font-size: 16px;
 }
 
-/* variables */
-
-:root {
-  --clr-primary: #1976d2;
-  --clr-primary-dark: #104a83;
-  --clr-light-gray: #ddd;
-  --clr-dark-gray: #aaa;
-  --clr-darker-gray: #555;
-  --ff-primary: Roboto;
-}
-
-/* Colour tokens. Every colour in the CSS (and the world map) goes through one of these.
-   The values here are the light theme; the dark palette below overrides them. */
-:root {
-  color-scheme: light;
-
-  /* brand */
-  --clr-on-primary: #fff;
-  --clr-link: #1976d2;
-  --clr-link-hover: #104a83;
-  --clr-text-accent: #5191d1;
-
-  /* surfaces, from back to front */
-  --clr-background: #fff;
-  --clr-surface: #fff;
-  --clr-surface-muted: #fafafa;
-  --clr-surface-subtle: #f0f0f0;
-  --clr-surface-sunken: #eee;
-  --clr-surface-disabled: #ddd;
-  --clr-surface-strong: #bbb;
-
-  /* text */
-  --clr-text: #000;
-  --clr-text-secondary: #555;
-  --clr-text-muted: #777;
-  --clr-text-subtle: #888;
-  --clr-text-disabled: #aaa;
-  --clr-text-faint: #ccc;
-  --clr-code-text: rgba(0, 32, 90, 0.87);
-  --clr-code-bg: rgba(223, 227, 234);
-
-  /* lines */
-  --clr-border: #aaa;
-  --clr-border-strong: #999;
-  --clr-border-light: rgb(200, 200, 200);
-  --clr-divider: rgba(0, 0, 0, 0.12);
-  --clr-divider-subtle: rgba(0, 0, 0, 0.1);
-  --clr-card-border: rgb(140, 140, 140);
-  --clr-infoview-border: green;
-
-  /* elevation */
-  --clr-shadow: rgba(0, 0, 0, 0.5);
-  --clr-shadow-soft: rgba(0, 0, 0, 0.1);
-  --clr-card-shadow: rgb(140, 140, 140);
-  --clr-backdrop: rgba(0, 0, 0, 0.25);
-
-  /* status */
-  --clr-info-bg: #DDF6FF;
-  --clr-info-text: #000;
-  --clr-warning-bg: #FEEFB3;
-  --clr-warning-text: #9F6000;
-  --clr-error-bg: #FFBABA;
-  --clr-error-text: #D8000C;
-  --clr-error-border: #D8000C;
-  --clr-danger-text: #d92c2c;
-  --clr-form-error: #a00;
-  --clr-new: rgb(255, 242, 190);
-  --clr-recent: rgb(242, 190, 255);
-  --clr-recent-glow: #8cbbe9;
-  --clr-processing: rgba(255, 165, 0, 1);
-  --clr-gutter-error: rgba(255, 0, 0, 1);
-
-  /* proof history, fading out from the newest (1) to the oldest (5) line */
-  --clr-history-1: #000;
-  --clr-history-2: #333;
-  --clr-history-3: #666;
-  --clr-history-4: #999;
-  --clr-history-5: #ccc;
-
-  /* world map */
-  --clr-world-completed: green;
-  --clr-world-unlocked: #1976d2;
-  --clr-world-locked: #999;
-  --clr-level-completed: #139e13;
-  --clr-level-locked: #bbb;
-  --clr-world-label-completed: #0e770e;
-  --clr-world-label-unlocked: #1667b8;
-  --clr-world-label-locked: #868686;
-  --clr-world-text: #fff;
-
-  /* landing page */
-  --clr-hero-fallback: rgb(29,0,36);
-  --clr-hero-start: rgba(97,9,121,1);
-  --clr-hero-end: rgba(0,212,255,1);
-  --clr-hero-text: rgb(255, 255, 255);
-  --clr-hero-text-hover: rgb(218, 218, 218);
-  --clr-landing-nav: rgba(0, 133, 162, .7);
-  --clr-landing-footer: rgba(0, 133, 162, 1);
-  --clr-landing-section: rgb(255, 255, 255);
-  --clr-landing-section-alt: rgb(248, 249, 250);
-}
-
-/* Dark palette. `data-theme` on <html> is set from the "Appearance" preference
-   (system / light / dark). Text on its background is at least WCAG AA (4.5:1). */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-
-  --clr-primary: #1976d2;
-  --clr-primary-dark: #a5cdf8;
-  --clr-light-gray: #3a3e46;
-  --clr-dark-gray: #4a4f58;
-  --clr-darker-gray: #b4bac2;
-
-  --clr-on-primary: #fff;
-  --clr-link: #6fb1f5;
-  --clr-link-hover: #a5cdf8;
-  --clr-text-accent: #7fb0e6;
-
-  --clr-background: #1e2127;
-  --clr-surface: #252830;
-  --clr-surface-muted: #22252b;
-  --clr-surface-subtle: #2a2d35;
-  --clr-surface-sunken: #16181c;
-  --clr-surface-disabled: #3a3e46;
-  --clr-surface-strong: #3a3e46;
-
-  --clr-text: #e6e8ec;
-  --clr-text-secondary: #b4bac2;
-  --clr-text-muted: #a0a6ae;
-  --clr-text-subtle: #a0a6ae;
-  --clr-text-disabled: #80868f;
-  --clr-text-faint: #646a73;
-  --clr-code-text: #c9d6ec;
-  --clr-code-bg: #2f3440;
-
-  --clr-border: #4a4f58;
-  --clr-border-strong: #80868f;
-  --clr-border-light: #3a3e46;
-  --clr-divider: rgba(255, 255, 255, 0.12);
-  --clr-divider-subtle: rgba(255, 255, 255, 0.1);
-  --clr-card-border: #4a4f58;
-  --clr-infoview-border: #2e7d32;
-
-  --clr-shadow: rgba(0, 0, 0, 0.7);
-  --clr-shadow-soft: rgba(0, 0, 0, 0.4);
-  --clr-card-shadow: rgba(0, 0, 0, 0.5);
-  --clr-backdrop: rgba(0, 0, 0, 0.6);
-
-  --clr-info-bg: #1b3346;
-  --clr-info-text: #e3eef7;
-  --clr-warning-bg: #3d3115;
-  --clr-warning-text: #ffd27a;
-  --clr-error-bg: #4a1c1f;
-  --clr-error-text: #ffb3b3;
-  --clr-error-border: #e5534b;
-  --clr-danger-text: #ff8a8a;
-  --clr-form-error: #ff8a8a;
-  --clr-new: #4a3f14;
-  --clr-recent: #43234d;
-  --clr-recent-glow: #3d6a99;
-  --clr-processing: rgba(255, 165, 0, 1);
-  --clr-gutter-error: rgba(255, 80, 80, 1);
-
-  --clr-history-1: #e6e8ec;
-  --clr-history-2: #b4bac2;
-  --clr-history-3: #8a9099;
-  --clr-history-4: #646a73;
-  --clr-history-5: #4a4f58;
-
-  --clr-world-completed: #1f8a1f;
-  --clr-world-unlocked: #1976d2;
-  --clr-world-locked: #5c626b;
-  --clr-level-completed: #139e13;
-  --clr-level-locked: #4a4f58;
-  --clr-world-label-completed: #0e770e;
-  --clr-world-label-unlocked: #1667b8;
-  --clr-world-label-locked: #5c626b;
-  --clr-world-text: #fff;
-
-  --clr-hero-fallback: rgb(29,0,36);
-  --clr-hero-start: rgba(97,9,121,1);
-  --clr-hero-end: rgba(0,212,255,1);
-  --clr-hero-text: #fff;
-  --clr-hero-text-hover: rgb(218, 218, 218);
-  --clr-landing-nav: rgba(0, 133, 162, .7);
-  --clr-landing-footer: #00687f;
-  --clr-landing-section: #1e2127;
-  --clr-landing-section-alt: #22252b;
-}
-
 /* General styling */
 
 body {
@@ -239,12 +49,18 @@ body {
   background: var(--clr-primary);
   color: var(--clr-on-primary);
   display: inline-block;
-  border-radius: 0.2em;
-  padding: 0.2rem .6em;
+  border-radius: var(--radius-sm);
+  padding: .3rem .8em;
   font-size: 1rem;
+  font-weight: 500;
   margin: 0 .2em;
   border: 0;
   cursor: pointer;
+  transition: filter .15s, background-color .15s, color .15s, box-shadow .15s;
+}
+
+.btn:hover:not([disabled]):not(.btn-disabled) {
+  filter: brightness(1.08);
 }
 
 .btn-inverted {
@@ -254,6 +70,11 @@ body {
 
 .btn-inverted:hover {
   color: var(--clr-link-hover);
+}
+
+.btn-inverted:hover:not([disabled]):not(.btn-disabled) {
+  filter: none;
+  background: var(--clr-surface-subtle);
 }
 
 .btn-disabled, .btn[disabled] {
@@ -266,20 +87,17 @@ body {
   background: var(--clr-surface);
 }
 
+/* Focus rings, for keyboard users only */
+.btn:focus-visible, .tab:focus-visible, .inventory .item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 em {
   font-style: italic;
 }
 
-/* App Bar */
-
-.app-bar {
-  background: var(--clr-primary);
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.1em;
-  filter: drop-shadow(0 0 5px var(--clr-shadow));
-  z-index: 20;
-}
+/* App Bar (its box is in `layout.css`) */
 
 .app-bar > .app-bar-left{
   display: flex;
@@ -349,10 +167,6 @@ em {
 
 .markdown ul, .markdown ol {
 	margin:0 1.5em 1.5em 1.5em;
-}
-
-.privacy-policy {
-  z-index: 10;
 }
 
 .modal hr {

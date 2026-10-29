@@ -55,3 +55,11 @@
   color: var(--clr-text);
   border-bottom: 0.3em solid var(--clr-border-strong);
 }
+
+.tab {
+  transition: color .15s, border-color .15s;
+}
+
+.tab:hover {
+  color: var(--clr-text);
+}

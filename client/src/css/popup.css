@@ -30,11 +30,12 @@
   min-width: max(50%, 300px);
   max-width: 60ch;
   max-height: 80%;
-  overflow: scroll;
+  overflow: auto;
   background: var(--clr-surface);
   z-index: 3;
   padding: 2em;
-  border-radius: 1em;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px var(--clr-shadow-soft);
   text-align: left;
   color: var(--vscode-breadcrumb-foreground);
 }
@@ -55,24 +56,21 @@
     overflow-x: auto;
   }
 
-  /* Preferences: the layout slider has a fixed width of 300px */
+  /* Preferences: room around the wide controls (see `WideControl`) */
   .modal .preferences-item.leave-left-gap {
     margin-left: 1.5em;
     margin-right: 1.5em;
-  }
-
-  .modal .preferences-item.leave-left-gap .MuiFormControlLabel-root {
-    display: flex;
-    margin: 0;
-  }
-
-  .modal .preferences-item.leave-left-gap .MuiBox-root {
-    max-width: 100%;
   }
 }
 
 .modal input[type="text"] {
   width: 100%;
+}
+
+/* Error messages in forms, e.g. when an uploaded file is not saved progress. */
+.form-error {
+  color: var(--clr-form-error);
+  margin: .5em 0;
 }
 
 .modal .form-error {
@@ -115,22 +113,17 @@
 
 }
 
-/* For the "Rules" popup. */
-.slider-wrapper {
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-top: 1rem;
-}
-.modal-close {
-  float: right;
-  scale: 2;
-  color: var(--vscode-breadcrumb-foreground);
+/* The close control is a button: drop the browser's button look. */
+button.modal-close {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
   cursor: pointer;
 }
-.modal-close:hover {
-  float: right;
-  scale: 2;
-  color: var(--vscode-breadcrumb-focusForeground);
+
+.modal:focus {
+  outline: none;
 }
 
 .modal .nav-button {
