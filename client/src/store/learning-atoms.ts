@@ -1,9 +1,12 @@
 /**
- * @fileOverview The atoms of the learning aids: the written proof.
+ * @fileOverview The atoms of the learning aids: the written proof and the glossary.
  */
 import { atom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
-import { inventoryOverviewAtom } from "./inventory-atoms"
+import { atomWithQuery } from "jotai-tanstack-query"
+import { Doc, InventoryTile } from "../api/game-data"
+import { gameIdAtom } from "./location-atoms"
+import { inventoryAtom, inventoryOverviewAtom, InventoryTab, inventoryTilesAtoms } from "./inventory-atoms"
 import { tacticKey } from "../utils/written-proof"
 
 // ---------------------------------------------------------------------------------------------
@@ -19,3 +22,55 @@ export const readsAsAtom = atom(get => {
 
 /** Whether the written proof is expanded (per browser; a convenience). */
 export const writtenProofOpenAtom = atomWithStorage('lean4game:writtenProofOpen', true, undefined, { getOnInit: true })
+
+// ---------------------------------------------------------------------------------------------
+// Glossary
+
+/** Whether the inventory panel shows the inventory or the glossary. */
+export const inventoryViewAtom = atom<'inventory' | 'glossary'>('inventory')
+
+/** An entry of the glossary: a doc entry of a tactic, theorem or definition. */
+export interface GlossaryEntry {
+  type: InventoryTab
+  tile: InventoryTile
+  /** Whether the player has not unlocked it yet. */
+  locked: boolean
+  doc?: Doc
+}
+
+const DOC_FILE_TYPE: Record<InventoryTab, string[]> = {
+  // Older games call theorems "Lemma".
+  [InventoryTab.theorem]: ['Theorem', 'Lemma'],
+  [InventoryTab.tactic]: ['Tactic'],
+  [InventoryTab.definition]: ['Definition'],
+}
+
+/** The tiles the glossary lists: all of the current inventory's (in a level: the level's,
+ * otherwise the game's), except hidden ones. */
+export const glossaryTilesAtom = atom(get => {
+  const unlocked = get(inventoryAtom) ?? []
+  return Object.values(InventoryTab).flatMap(type =>
+    get(inventoryTilesAtoms[type])
+      .filter(tile => !tile.hidden)
+      .map(tile => ({ type, tile, locked: tile.locked && !unlocked.includes(tile.name) })))
+})
+
+/** The glossary's entries with their docs. The docs are fetched when the glossary is opened. */
+export const glossaryQueryAtom = atomWithQuery<GlossaryEntry[]>(get => {
+  const gameId = get(gameIdAtom)
+  const entries = get(glossaryTilesAtom)
+  const enabled = get(inventoryViewAtom) === 'glossary'
+  return {
+    queryKey: ['glossary', gameId, entries.map(e => `${e.type}:${e.tile.name}:${e.locked}`).join(',')],
+    enabled,
+    queryFn: async () => Promise.all(entries.map(async entry => {
+      for (const type of DOC_FILE_TYPE[entry.type]) {
+        try {
+          const res = await fetch(`${window.location.origin}/data/${gameId}/doc__${type}__${entry.tile.name}.json`)
+          if (res.ok) return { ...entry, doc: await res.json() as Doc }
+        } catch { /* the entry is shown without its doc */ }
+      }
+      return entry
+    })),
+  }
+})

@@ -154,5 +154,16 @@
   "Next hint ({{n}} of {{total}})": "Next hint ({{n}} of {{total}})",
   "Written proof": "Written proof",
   "nothing": "nothing",
-  "Your proof, in words, appears here as you write it.": "Your proof, in words, appears here as you write it."
+  "Your proof, in words, appears here as you write it.": "Your proof, in words, appears here as you write it.",
+  "Inventory or glossary": "Inventory or glossary",
+  "Glossary": "Glossary",
+  "Search tactics, theorems and definitions": "Search tactics, theorems and definitions",
+  "Search the glossary": "Search the glossary",
+  "Include items not unlocked yet": "Include items not unlocked yet",
+  "Tactic": "Tactic",
+  "Definition": "Definition",
+  "Loading…": "Loading…",
+  "In a written proof:": "In a written proof:",
+  "{{count}} entries_one": "{{count}} entry",
+  "{{count}} entries_other": "{{count}} entries"
 }

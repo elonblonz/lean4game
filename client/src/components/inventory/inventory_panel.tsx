@@ -7,6 +7,9 @@ import { InventorySubTabBar, InventoryTabBar } from "./tab_bars"
 import { InventoryList } from "./inventory_list"
 import { Documentation } from "./documentation"
 import { difficultyAtom } from "../../store/progress-atoms"
+import { inventoryViewAtom } from "../../store/learning-atoms"
+import { Glossary } from "../learning/Glossary"
+import { moveFocusWithArrows } from "../../utils/a11y"
 
 /** The panel showing the user's inventory with tactics, definitions, and lemmas.
  *
@@ -23,6 +26,7 @@ export function InventoryPanel({visible = true, id} : {
   const [, closeDoc] = useAtom(closeDocAtom)
   const [source] = useAtom(inventorySourceAtom)
   const [difficulty] = useAtom(difficultyAtom)
+  const [view, setView] = useAtom(inventoryViewAtom)
 
   // Switching to another tab shows that tab's list: close the open doc (it is looked up
   // under the current tab, so it would show up empty).
@@ -42,9 +46,20 @@ export function InventoryPanel({visible = true, id} : {
 
   return <div className={`column inventory-panel inventory panel ${visible ? '' : 'hidden'}`}
       id={id} role="complementary" aria-label={t("Inventory")}>
-    <InventoryTabBar />
-    <InventorySubTabBar />
-    <InventoryList docType={tab} enableAll={difficulty == 0} />
-    {doc && <Documentation type={tab} />}
+    <div className="tab-bar view-switch" role="tablist" aria-label={t("Inventory or glossary")}
+        onKeyDown={ev => moveFocusWithArrows(ev, Array.from(ev.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')))}>
+      {(["inventory", "glossary"] as const).map(v =>
+        <button key={v} role="tab" aria-selected={view == v} tabIndex={view == v ? 0 : -1}
+            className={`tab${view == v ? " active" : ""}`} onClick={() => setView(v)}>
+          {v == "inventory" ? t("Inventory") : t("Glossary")}
+        </button>
+      )}
+    </div>
+    {view == "glossary" ? <Glossary /> : <>
+      <InventoryTabBar />
+      <InventorySubTabBar />
+      <InventoryList docType={tab} enableAll={difficulty == 0} />
+      {doc && <Documentation type={tab} />}
+    </>}
   </div>
 }

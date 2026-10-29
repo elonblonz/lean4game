@@ -84,3 +84,143 @@
   opacity: .8;
   margin-bottom: .2em;
 }
+
+/* Inventory / glossary switch at the top of the inventory panel */
+.tab-bar.view-switch {
+  flex-shrink: 0;
+  display: flex;
+  margin: .5rem;
+  border: 1px solid var(--clr-primary);
+  border-radius: .3rem;
+  overflow: hidden;
+}
+
+.view-switch .tab {
+  flex: 1;
+  margin: 0;
+  padding: .2rem 0;
+  font: inherit;
+  font-weight: 500;
+  background-color: var(--clr-surface);
+  color: var(--clr-link);
+  border-bottom: 0;
+}
+
+.view-switch .tab.active {
+  background-color: var(--clr-primary);
+  color: var(--clr-on-primary);
+  border-bottom: 0;
+}
+
+/* Glossary */
+.glossary {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.glossary-controls {
+  flex-shrink: 0;
+  padding: 0 .5rem;
+}
+
+.glossary-search {
+  box-sizing: border-box;
+  width: 100%;
+  padding: .4em .6em;
+  font: inherit;
+  color: var(--clr-text);
+  background-color: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+}
+
+.glossary-search:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.glossary-locked {
+  display: flex;
+  align-items: center;
+  gap: .4em;
+  margin: .4em 0;
+  font-size: .9em;
+  color: var(--clr-text-secondary);
+}
+
+.glossary-count {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  padding: 0 .5rem .3rem;
+  font-size: .85em;
+  color: var(--clr-text-muted);
+}
+
+.glossary-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 .5rem 1rem;
+}
+
+.glossary-list h3 {
+  margin: .8em 0 .3em;
+  font-size: 1em;
+  color: var(--clr-text-secondary);
+}
+
+.glossary-entry {
+  border-bottom: 1px solid var(--clr-divider);
+  padding: .3em 0;
+}
+
+.glossary-entry > summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .25em .6em;
+}
+
+.glossary-entry > summary::before {
+  content: "▸";
+  color: var(--clr-text-muted);
+}
+
+.glossary-entry[open] > summary::before {
+  content: "▾";
+}
+
+.glossary-entry > summary::-webkit-details-marker {
+  display: none;
+}
+
+.glossary-entry > summary {
+  list-style: none;
+}
+
+.glossary-name {
+  font-weight: 600;
+}
+
+.glossary-type {
+  font-size: .8em;
+  color: var(--clr-text-muted);
+}
+
+.glossary-entry.locked .glossary-name {
+  color: var(--clr-text-muted);
+}
+
+.glossary-entry code {
+  overflow-wrap: anywhere;
+}
+
+.glossary-reads-as, .glossary-missing {
+  font-size: .9em;
+  color: var(--clr-text-secondary);
+}
