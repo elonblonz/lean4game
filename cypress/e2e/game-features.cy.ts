@@ -405,16 +405,191 @@ describe('Basic Lean4Game Features', () => {
       cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
       cy.contains('Assumptions:', { timeout: 60000 })
       // The tabs: arrow keys move, Enter selects.
-      cy.get('.inventory [role="tab"][aria-selected="true"]').should('contain', 'Tactics').focus()
+      cy.get('.inventory .tab-bar.major [role="tab"][aria-selected="true"]').should('contain', 'Tactics').focus()
       cy.focused().type('{leftarrow}')
       cy.focused().should('contain', 'Theorems').type('{enter}')
-      cy.get('.inventory [role="tab"][aria-selected="true"]').should('contain', 'Theorems')
+      cy.get('.inventory .tab-bar.major [role="tab"][aria-selected="true"]').should('contain', 'Theorems')
       // An item opens its doc with Enter, Escape closes it and gives the focus back.
       cy.get('.inventory').contains('[role="button"]', 'add_comm').focus().type('{enter}')
       cy.get('.documentation').contains('Commutativity').should('be.visible')
       cy.focused().type('{esc}')
       cy.get('.documentation').should('not.exist')
       cy.focused().should('contain', 'add_comm')
+    })
+  })
+
+  describe('Written Proof', () => {
+    it('should translate the proof line by line with the tactics\' templates', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.written-proof summary').should('contain', 'Written proof')
+      cy.get('.written-proof').should('contain', 'appears here as you write it')
+
+      typeCommand('rw [h]')
+      // `TacticDoc rw reads "Rewriting with {args}, it remains to show {goalAfter}."`
+      cy.get('.written-proof-line', { timeout: 30000 }).should('have.length', 1).first()
+        .should('contain', 'Rewriting with [h], it remains to show 2 + 2 = y.')
+      cy.get('.written-proof-line code').first().should('have.text', '[h]')
+
+      typeCommand('rw [g]')
+      cy.contains('Level completed!', { timeout: 60000 })
+      cy.get('.written-proof-line').should('have.length', 2).last()
+        .should('contain', 'Rewriting with [g], it remains to show nothing.')
+      cy.get('.written-proof-qed').should('contain', '∎')
+    })
+
+    it('should show tactics without a template as code', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/3')
+      cy.contains('intro first!', { timeout: 60000 })
+      typeCommand('intro x')
+      // `TacticDoc intro reads "Let {1} : {1:type} be arbitrary."`
+      cy.get('.written-proof-line', { timeout: 30000 }).first().should('contain', 'Let x : Nat be arbitrary.')
+      typeCommand('apply x')
+      cy.contains('Done!', { timeout: 30000 })
+      cy.get('.written-proof-line.untranslated').should('have.length', 1).find('code').should('have.text', 'apply x')
+    })
+
+    it('should be collapsible', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.written-proof').should('have.attr', 'open')
+      cy.get('.written-proof summary').click()
+      cy.get('.written-proof').should('not.have.attr', 'open')
+      // remembered
+      cy.reload()
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.written-proof').should('not.have.attr', 'open')
+    })
+  })
+
+  describe('Hint Ladder', () => {
+    it('should reveal hidden hints one at a time', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.chat').should('not.contain', 'Idea: replace x by its value.')
+
+      cy.get('.chat-panel').contains('button', 'Show more help!').click()
+      cy.get('.chat').contains('Idea: replace x by its value.').should('be.visible')
+      cy.get('.chat').should('not.contain', 'Next step: rewrite with h.')
+      cy.get('.chat .hint-rung').should('contain', 'Hint 1 of 3')
+
+      cy.get('.chat-panel').contains('button', 'Next hint (2 of 3)').click()
+      cy.get('.chat').contains('Next step: rewrite with h.').should('be.visible')
+      cy.get('.chat').should('not.contain', 'Specific move')
+
+      cy.get('.chat-panel').contains('button', 'Next hint (3 of 3)').click()
+      cy.get('.chat').contains('Specific move: type rw [h].').should('be.visible')
+      cy.get('.chat-panel').contains('button', /Show more help|Next hint/).should('not.exist')
+
+      // The revealed hints are saved with the progress.
+      cy.reload()
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.chat').contains('Specific move: type rw [h].').should('be.visible')
+      cy.get('.chat').find('.hidden-hint').should('have.length', 3)
+    })
+  })
+
+  describe('Glossary', () => {
+    it('should search the docs of tactics, theorems and definitions', () => {
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.contains('Assumptions:', { timeout: 60000 })
+      cy.get('.inventory .view-switch').contains('[role="tab"]', 'Glossary').click()
+      cy.get('.glossary').should('be.visible')
+      cy.get('.inventory .tab-bar.major').should('not.exist')
+
+      // Unlocked in this level: rw and rfl, add_comm, equality and +.
+      cy.get('.glossary-list').should('contain', 'rw').and('contain', 'add_comm').and('contain', 'equality')
+      cy.get('.glossary-list').should('not.contain', 'intro')
+
+      // Searches the doc texts, too.
+      cy.get('.glossary-search').type('rewrites')
+      cy.get('.glossary-entry').should('have.length', 1).find('summary').click()
+      cy.get('.glossary-entry').should('contain', 'Rewrites the goal with an equation.')
+        .and('contain', 'In a written proof:')
+      cy.get('.glossary-search').clear().type('zzzz')
+      cy.get('.glossary-entry').should('not.exist')
+      cy.get('.glossary-count').should('contain', '0 entries')
+
+      // Items still to come, on request.
+      cy.get('.glossary-search').clear()
+      cy.get('.glossary-locked input').check()
+      cy.get('.glossary-entry.locked').should('contain', 'intro')
+
+      cy.get('.inventory .view-switch').contains('[role="tab"]', 'Inventory').click()
+      cy.get('.inventory .tab-bar.major').should('be.visible')
+    })
+  })
+
+  describe('World Recap', () => {
+    const solved = { code: '', selections: [], completed: true, help: [] }
+
+    // Levels 2 and 3 solved: solving level 1 completes the world.
+    const almostDone = () => {
+      cy.window().then(win => win.localStorage.setItem('game_progress', JSON.stringify({ games: {
+        'g/test/TestGame': { inventory: [], difficulty: 2, readIntro: true, data: {
+          TestWorld: { readIntro: true, 2: solved, 3: { ...solved, notes: 'intro, then apply' } } } } } })))
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/1')
+      cy.reload()
+      cy.contains('Assumptions:', { timeout: 60000 })
+    }
+
+    it('should show the recap when the world is completed', () => {
+      almostDone()
+      cy.get('[role="dialog"]').should('not.exist')
+      solveLevel1()
+
+      cy.get('[role="dialog"]').should('be.visible').within(() => {
+        cy.contains('h2', 'World recap: Test World')
+        cy.contains('What you learned')
+        cy.get('.recap-techniques').should('contain', 'rw').and('contain', 'intro').and('contain', 'equality')
+        cy.get('.recap-level').should('have.length', 3)
+        cy.get('.recap-level').eq(2).find('textarea').should('have.value', 'intro, then apply')
+        cy.get('.recap-level').eq(1).find('textarea').type('have, then exact')
+      })
+      cy.window().then(win => {
+        const progress = JSON.parse(win.localStorage.getItem('game_progress')!)
+        expect(progress.games['g/test/TestGame'].data.TestWorld[2].notes).to.equal('have, then exact')
+      })
+
+      // A technique links to the level that introduced it.
+      cy.get('.recap-techniques').contains('li', 'intro').find('a').click()
+      cy.get('[role="dialog"]').should('not.exist')
+      cy.url().should('include', '/world/TestWorld/level/3')
+      // The level's notes are there, too.
+      cy.get('.level-notes textarea').should('have.value', 'intro, then apply')
+    })
+
+    it('should replay a level without hints', () => {
+      almostDone()
+      solveLevel1()
+      cy.get('[role="dialog"]').within(() => {
+        cy.get('.recap-level').eq(0).contains('button', 'Replay without hints').click()
+      })
+      cy.get('[role="dialog"]').should('not.exist')
+      // The proof starts again, without hints, and the level stays solved.
+      cy.get('.chat').contains('You are replaying this level without hints.', { timeout: 30000 })
+      cy.get('.chat').should('not.contain', 'You can either start using h or g.')
+      cy.get('.chat-panel').contains('button', 'Show more help!').should('not.exist')
+      cy.get('.written-proof-line').should('not.exist')
+      cy.get('.app-bar').find('[title="next level"]').should('not.be.disabled')
+
+      // Solving it ends the replay.
+      solveLevel1()
+      cy.get('.chat').should('not.contain', 'You are replaying this level without hints.')
+      cy.get('.chat').contains('You should use g now.')
+    })
+
+    it('should show the hints again on request', () => {
+      almostDone()
+      solveLevel1()
+      cy.get('[role="dialog"]').find('.recap-level').first().contains('button', 'Replay without hints').click()
+      cy.get('.chat').contains('button', 'Show hints').click()
+      cy.get('.chat').contains('You can either start using h or g.').should('be.visible')
+      cy.get('.chat').should('not.contain', 'You are replaying this level without hints.')
+      // The world's introduction offers the recap, too.
+      cy.visit('/#/g/test/TestGame/world/TestWorld/level/0')
+      cy.contains('button', 'World recap').click()
+      cy.get('[role="dialog"]').contains('h2', 'World recap: Test World')
     })
   })
 

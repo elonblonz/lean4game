@@ -16,4 +16,7 @@ Statement : Nat → Nat := by
 
 Conclusion "Done!"
 
+/-- Introduces a variable. -/
+TacticDoc intro reads "Let {1} : {1:type} be arbitrary."
+
 NewTactic intro apply

@@ -1,7 +1,7 @@
 msgid ""
 msgstr "Project-Id-Version: Game v4.35.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-24\n"
+"POT-Creation-Date: 2026-10-29\n"
 "Last-Translator: \n"
 "Language-Team: none\n"
 "Language: en\n"
@@ -10,16 +10,16 @@ msgstr "Project-Id-Version: Game v4.35.0\n"
 "X-Poedit-Basepath: ../..\n"
 "X-Poedit-SearchPath-0: ."
 
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:34
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:40
 msgid "Addition"
 msgstr ""
 
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:31
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:37
 msgid "An equality"
 msgstr ""
 
 #. §0: `ℕ`
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:28
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:34
 msgid "Commutativity on §0"
 msgstr ""
 
@@ -32,13 +32,44 @@ msgstr ""
 msgid "Hypothesis Names"
 msgstr ""
 
+#. §0: `x`
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:15
+msgid "Idea: replace §0 by its value."
+msgstr ""
+
+#: Game/Levels/DemoWorld/L03_NonProp.lean:19
+msgid "Introduces a variable."
+msgstr ""
+
+#: Game/Levels/DemoWorld/L03_NonProp.lean:19
+msgid "Let {1} : {1:type} be arbitrary."
+msgstr ""
+
 #. §0: `«{h}»`
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:17
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:20
 msgid "Maybe you should use §0 now."
+msgstr ""
+
+#. §0: `«{h}»`
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:16
+msgid "Next step: rewrite with §0."
 msgstr ""
 
 #: Game/Levels/DemoWorld/L03_NonProp.lean:6
 msgid "Non-Prop-Valued"
+msgstr ""
+
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:31
+msgid "Rewrites the goal with an equation."
+msgstr ""
+
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:31
+msgid "Rewriting with {args}, it remains to show {goalAfter}."
+msgstr ""
+
+#. §0: `rw [«{h}»]`
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:17
+msgid "Specific move: type §0."
 msgstr ""
 
 #: Game.lean:3
@@ -54,7 +85,7 @@ msgstr ""
 msgid "Test World"
 msgstr ""
 
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:25
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:28
 msgid "The way to proof reflexivity."
 msgstr ""
 
@@ -84,7 +115,7 @@ msgstr ""
 msgid "This is the introduction text of the game."
 msgstr ""
 
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:23
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:26
 msgid "This last message appears if the level is solved."
 msgstr ""
 
@@ -95,7 +126,7 @@ msgid "You can either start using §0 or §1."
 msgstr ""
 
 #. §0: `«{g}»`
-#: Game/Levels/DemoWorld/L01_HelloWorld.lean:20
+#: Game/Levels/DemoWorld/L01_HelloWorld.lean:23
 #: Game/Levels/DemoWorld/L02_HypothesisNames.lean:12
 msgid "You should use §0 now."
 msgstr ""

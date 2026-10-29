@@ -12,6 +12,9 @@ variable (x y : Nat)
 Statement (h : x = 2) (g: y = 4) : x + x = y := by
   Hint "You can either start \
         using `{h}` or `{g}`."
+  Hint (hidden := true) "Idea: replace `x` by its value."
+  Hint (hidden := true) "Next step: rewrite with `{h}`."
+  Hint (hidden := true) "Specific move: type `rw [{h}]`."
   Branch
     rw [g]
     Hint "Maybe you should use `{h}` now."
@@ -24,6 +27,9 @@ Conclusion "This last message appears if the level is solved."
 
 /-- The way to proof reflexivity. -/
 TacticDoc rfl
+
+/-- Rewrites the goal with an equation. -/
+TacticDoc rw reads "Rewriting with {args}, it remains to show {goalAfter}."
 
 /-- Commutativity on `ℕ` -/
 TheoremDoc Nat.add_comm as "add_comm" in "ℕ"
