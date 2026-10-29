@@ -12,6 +12,10 @@ export interface LevelProgress {
   /** How many of a row's hidden hints have been revealed, one by one ("hint ladder"). Rows in
    * `help` that are missing here (progress saved by older versions) show all their hidden hints. */
   helpCount?: {[row: number]: number},
+  /** Replaying the level without hints (see the world recap). */
+  noHints?: boolean,
+  /** The player's own notes on the level. */
+  notes?: string,
 }
 
 export interface WorldProgress {

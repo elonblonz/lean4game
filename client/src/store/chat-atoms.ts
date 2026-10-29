@@ -43,6 +43,25 @@ export const helpAtom = atom(
   }
 )
 
+/** Whether the current level is being replayed without hints (see the world recap). */
+export const noHintsAtom = atom(
+  get => get(levelProgressAtom)?.noHints ?? false,
+  (get, set, val: boolean) => {
+    const levelProgress = get(levelProgressAtom)
+    if (levelProgress == null) return
+    set(levelProgressAtom, { ...levelProgress, noHints: val || undefined })
+  }
+)
+
+/** The player's notes on the current level. */
+export const levelNotesAtom = atom(
+  get => get(levelProgressAtom)?.notes ?? "",
+  (get, set, val: string) => {
+    const levelProgress = get(levelProgressAtom)
+    if (levelProgress == null) return
+    set(levelProgressAtom, { ...levelProgress, notes: val || undefined })
+  }
+)
 
 /**
  * When deleting the proof, we want to keep to old messages around until

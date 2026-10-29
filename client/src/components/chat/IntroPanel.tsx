@@ -11,6 +11,7 @@ import { Hint } from "../hints"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faArrowRight, faHome } from "@fortawesome/free-solid-svg-icons"
 import { Button } from "../button"
+import { WorldRecapButton } from "./ChatPanel"
 
 /** Appears on the left side of the intro of a world */
 export function IntroPanel() {
@@ -47,6 +48,7 @@ export function IntroPanel() {
           {t("Start")}&nbsp;<FontAwesomeIcon icon={faArrowRight} />
         </Button>
       }
+      <WorldRecapButton />
     </div>
   </div>
 }

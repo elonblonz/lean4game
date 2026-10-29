@@ -4,7 +4,7 @@ import { Button } from "./button";
 import { useGameTranslation } from "../utils/translation";
 import { useTranslation } from "react-i18next";
 import { useAtom } from "jotai";
-import { helpAtom } from "../store/chat-atoms";
+import { helpAtom, noHintsAtom } from "../store/chat-atoms";
 import { proofAtom } from "../store/proof-atoms";
 import { GameHint } from '../api/rpc_api';
 import { hiddenHintCount, lastValidStep } from '../utils/proof';
@@ -82,6 +82,7 @@ export function MoreHelpButton({selected=null} : {selected: number | null}) {
 
   const { t } = useTranslation()
   const [help, setHelp] = useAtom(helpAtom)
+  const [noHints] = useAtom(noHintsAtom)
 
   const [proof] = useAtom(proofAtom)
 
@@ -96,7 +97,7 @@ export function MoreHelpButton({selected=null} : {selected: number | null}) {
     setHelp(new Map(help).set(k, revealed + 1))
   }
 
-  if (revealed >= total) return null
+  if (noHints || revealed >= total) return null
   return <Button onClick={revealNextHint}
       title={total > 1 ? t("Hint {{n}} of {{total}}", {n: revealed + 1, total}) : undefined}>
     {revealed == 0 ? t("Show more help!") : t("Next hint ({{n}} of {{total}})", {n: revealed + 1, total})}

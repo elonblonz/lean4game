@@ -106,6 +106,21 @@ export const levelProgressAtom = atom(
   }
 )
 
+/** Change the progress of any level of the current game (not only the current one), e.g. from
+ * the world recap. `update` gets the level's progress (the default one if there is none yet). */
+export const updateLevelProgressAtom = atom(null,
+  (get, set, worldId: string, levelId: number, update: (levelProgress: LevelProgress) => LevelProgress) => {
+    const progress = get(progressAtom)
+    if (!progress) return
+    const worldProgress = progress.data[worldId] ?? defaultWorldProgress
+    const levelProgress = worldProgress[levelId] ?? defaultLevelProgress
+    set(progressAtom, { ...progress, data: {
+      ...progress.data,
+      [worldId]: { ...worldProgress, [levelId]: update(levelProgress) }
+    }})
+  }
+)
+
 /** The selected difficulty for the current game */
 export const difficultyAtom = atom(
   get => {

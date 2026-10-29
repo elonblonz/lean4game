@@ -1,10 +1,14 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useAtom } from "jotai"
 import { editorAtom, levelUriAtom } from "../../store/lean-atoms"
 import { currentProofAtom, typewriterModeAtom } from "../../store/proof-atoms"
 import { inventoryAtom } from "../../store/inventory-atoms"
 import { completedAtom } from "../../store/progress-atoms"
 import { levelInfoAtom } from "../../store/query-atoms"
+import { noHintsAtom } from "../../store/chat-atoms"
+import { worldIdAtom } from "../../store/location-atoms"
+import { worldCompletedAtom } from "../../store/world-tree-atoms"
+import { popupAtom, PopupType } from "../../store/popup-atoms"
 
 /**
  * What the game does with the level's editor and proof: complete the level and unlock its items
@@ -24,9 +28,12 @@ export function useLevelGameLogic() {
   const [currentProof] = useAtom(currentProofAtom)
   const [, setCompleted] = useAtom(completedAtom)
   const [, addToInventory] = useAtom(inventoryAtom)
+  const [noHints, setNoHints] = useAtom(noHintsAtom)
   useEffect(() => {
     if (!currentProof?.completed || !levelInfo) return
     setCompleted(true)
+    // A replay without hints ends when the level is solved: its hints show up again.
+    if (noHints) setNoHints(false)
     const newTiles = [
       ...levelInfo.tactics ?? [],
       ...levelInfo.lemmas ?? [],
@@ -38,6 +45,17 @@ export function useLevelGameLogic() {
     }
     addToInventory(newTiles)
   }, [currentProof, levelInfo])
+
+  // Show the world recap when this level completes the world (not when opening a level of a
+  // world that was completed before).
+  const [worldId] = useAtom(worldIdAtom)
+  const [worldCompleted] = useAtom(worldCompletedAtom(worldId ?? ""))
+  const [, setPopup] = useAtom(popupAtom)
+  const worldCompletedBefore = useRef(worldCompleted)
+  useEffect(() => {
+    if (worldCompleted && !worldCompletedBefore.current) setPopup(PopupType.recap)
+    worldCompletedBefore.current = worldCompleted
+  }, [worldCompleted])
 
   // A level with a template (these are always played in the editor, see `lockEditorModeAtom`)
   // starts with the template's text: insert it when this level's editor opens empty (the editor

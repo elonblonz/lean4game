@@ -6,7 +6,7 @@ import { useGameTranslation } from '../../utils/translation'
 import { isLastLevelAtom, levelInfoAtom } from '../../store/query-atoms'
 import { proofAtom } from '../../store/proof-atoms'
 import { MoreHelpButton } from '../hints'
-import { NextLevelButton } from './ChatPanel'
+import { NextLevelButton, NoHintsMessage, WorldRecapButton } from './ChatPanel'
 
 /**
  * On mobile there is no chat panel: the hints are shown inside the proof steps, and this
@@ -29,6 +29,7 @@ export function MobileLevelFooter() {
   if (!proof) return null
 
   return <div className="mobile-level-footer">
+    <NoHintsMessage />
     {/* The proof itself already ends with the game's "level completed" message. */}
     {proof.completed && <>
       {levelInfo?.conclusion?.trim() &&
@@ -39,6 +40,7 @@ export function MobileLevelFooter() {
     </>}
     <div className="button-row mobile">
       {proof.completed && <NextLevelButton ref={focusRef} lastLevel={lastLevel} />}
+      {proof.completed && <WorldRecapButton />}
       <MoreHelpButton selected={null} />
     </div>
   </div>

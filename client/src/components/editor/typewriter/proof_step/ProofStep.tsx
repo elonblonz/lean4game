@@ -1,7 +1,7 @@
 import React from "react";
 import { InteractiveGoalsWithHints } from "../../../../api/rpc_api";
 import { useAtom } from "jotai";
-import { helpAtom, selectedStepAtom } from "../../../../store/chat-atoms";
+import { helpAtom, noHintsAtom, selectedStepAtom } from "../../../../store/chat-atoms";
 import { twMerge } from "tailwind-merge";
 import { Command } from "./Command";
 import { proofAtom } from "../../../../store/proof-atoms";
@@ -18,6 +18,7 @@ export function ProofStep({step, idx}: {step:InteractiveGoalsWithHints, idx: num
   const [selectedStep, setSelectedStep] = useAtom(selectedStepAtom)
   const [proof] = useAtom(proofAtom)
   const [help] = useAtom(helpAtom)
+  const [noHints] = useAtom(noHintsAtom)
   const [mobile] = useAtom(mobileAtom)
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
   const [{ data: levelInfo }] = useAtom(levelInfoAtom)
@@ -45,7 +46,7 @@ export function ProofStep({step, idx}: {step:InteractiveGoalsWithHints, idx: num
             hint={{text: it, hidden: false, rawText: it, varNames: []}} step={0} selected={selectedStep} toggleSelection={toggleSelectStep(0)} />
         ))
       }
-      {mobile &&
+      {mobile && !noHints &&
         <Hints key={`hints-${idx}`}
           hints={filteredHints} revealed={help.get(idx) ?? 0} step={idx}
           selected={selectedStep} toggleSelection={toggleSelectStep(idx)}/>

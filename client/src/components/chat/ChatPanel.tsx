@@ -4,9 +4,11 @@ import { useGameTranslation } from '../../utils/translation'
 import { useEffect, useRef } from 'react'
 import { useAtom } from 'jotai'
 import { mobileAtom } from '../../store/preferences-atoms'
-import { gameIdAtom, levelIdAtom } from '../../store/location-atoms'
-import { levelInfoAtom } from '../../store/query-atoms'
-import { deletedChatAtom, helpAtom, selectedStepAtom } from '../../store/chat-atoms'
+import { gameIdAtom, levelIdAtom, worldIdAtom } from '../../store/location-atoms'
+import { gameInfoAtom, levelInfoAtom } from '../../store/query-atoms'
+import { deletedChatAtom, helpAtom, noHintsAtom, selectedStepAtom } from '../../store/chat-atoms'
+import { worldCompletedAtom } from '../../store/world-tree-atoms'
+import { popupAtom, PopupType } from '../../store/popup-atoms'
 import { lastValidStepAtom, proofAtom } from '../../store/proof-atoms'
 import { DeletedHints, Hint, Hints, MoreHelpButton } from '../hints'
 import { isLastStepWithErrors, stepHints } from '../../utils/proof'
@@ -29,6 +31,28 @@ export const NextLevelButton = React.forwardRef<HTMLButtonElement, {lastLevel: b
     </Button>
 })
 
+/** "World recap" button, shown once the current world is completed. */
+export function WorldRecapButton() {
+  const { t } = useTranslation()
+  const [worldId] = useAtom(worldIdAtom)
+  const [worldCompleted] = useAtom(worldCompletedAtom(worldId ?? ""))
+  const [{ data: gameInfo }] = useAtom(gameInfoAtom)
+  const [, setPopup] = useAtom(popupAtom)
+  if (!worldId || !worldCompleted || !gameInfo?.worldSize?.[worldId]) return null
+  return <Button onClick={() => setPopup(PopupType.recap)}>{t("World recap")}</Button>
+}
+
+/** Shown instead of the hints while the level is replayed without hints. */
+export function NoHintsMessage() {
+  const { t } = useTranslation()
+  const [noHints, setNoHints] = useAtom(noHintsAtom)
+  if (!noHints) return null
+  return <div className="message information no-hints">
+    {t("You are replaying this level without hints.")}{' '}
+    <button className="link-button" onClick={() => setNoHints(false)}>{t("Show hints")}</button>
+  </div>
+}
+
 /** Appears on the left of playable levels */
 export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visible?: boolean}) {
   let { t } = useTranslation()
@@ -42,6 +66,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
   const [proof] = useAtom(proofAtom)
   const [deletedChat] = useAtom(deletedChatAtom)
   const [selectedStep, setSelectedStep] = useAtom(selectedStepAtom)
+  const [noHints] = useAtom(noHintsAtom)
 
   const [k] = useAtom(lastValidStepAtom)
 
@@ -96,7 +121,8 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
         <Hint key={`intro-p-${i}`}
           hint={{text: it, hidden: false, rawText: it, varNames: []}} step={0} selected={selectedStep} toggleSelection={toggleSelection(0)} />
       ))}
-      {proof?.steps.map((step, i) => {
+      <NoHintsMessage />
+      {!noHints && proof?.steps.map((step, i) => {
         let filteredHints = stepHints(proof, i)
         if (step.goals.length > 0 && !isLastStepWithErrors(proof, i)) {
           return <Hints key={`hints-${i}`}
@@ -115,7 +141,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
             selected={selectedStep} toggleSelection={toggleSelection(i)} lastLevel={i == proof?.steps.length - 1}/>
         }
       })} */}
-      <DeletedHints hints={deletedChat}/>
+      {!noHints && <DeletedHints hints={deletedChat}/>}
       {proof?.completed &&
         <>
           <div className={`message information recent step-${k}${selectedStep == k ? ' selected' : ''}`} onClick={toggleSelection(k)}>
@@ -131,6 +157,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
     </div>
     <div className="button-row">
       {proof?.completed && <NextLevelButton ref={focusRef} lastLevel={lastLevel} />}
+      {proof?.completed && <WorldRecapButton />}
       <MoreHelpButton selected={null} />
     </div>
   </div>

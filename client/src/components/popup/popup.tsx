@@ -11,6 +11,7 @@ import { UploadPopup } from './upload'
 import { PreferencesPopup } from './preferences'
 import { ErasePopup } from './erase'
 import { RulesHelpPopup } from './rules_help'
+import { WorldRecapPopup } from '../learning/WorldRecap'
 
 /**
  * To create a new popup on needs add a option to `PopupType`,
@@ -32,6 +33,8 @@ function getPopupContent(popup: PopupType) {
       return <PreferencesPopup />
     case PopupType.privacy:
       return <PrivacyPolicyPopup />
+    case PopupType.recap:
+      return <WorldRecapPopup />
     case PopupType.rules:
       return <RulesHelpPopup />
     case PopupType.upload:

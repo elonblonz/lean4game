@@ -75,6 +75,25 @@
   text-align: right;
 }
 
+.notes-field {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 1.5em);
+  margin: 0 .75em .5em;
+  padding: .4em .5em;
+  font: inherit;
+  color: var(--clr-text);
+  background-color: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+
+.notes-field:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* Hint ladder: "Hint 2 of 3" above a revealed hidden hint. */
 .hint-rung {
   font-size: .75em;
@@ -83,6 +102,17 @@
   letter-spacing: .04em;
   opacity: .8;
   margin-bottom: .2em;
+}
+
+/* Replaying a level without hints */
+.message.no-hints .link-button, .link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--clr-link);
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* Inventory / glossary switch at the top of the inventory panel */
@@ -223,4 +253,53 @@
 .glossary-reads-as, .glossary-missing {
   font-size: .9em;
   color: var(--clr-text-secondary);
+}
+
+/* World recap */
+.world-recap h3 {
+  margin-top: 1.2em;
+}
+
+.world-recap h4 {
+  margin: .6em 0 .2em;
+}
+
+.recap-techniques ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.recap-techniques li {
+  margin: .15em 0;
+}
+
+.recap-levels {
+  padding-left: 1.2em;
+}
+
+.recap-level {
+  margin-bottom: .8em;
+}
+
+.recap-level-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .3em .8em;
+  margin-bottom: .3em;
+}
+
+.recap-done {
+  color: var(--clr-primary);
+}
+
+.recap-level .btn.recap-replay {
+  margin: 0;
+  padding: .2em .6em;
+  font-size: .85em;
+}
+
+.world-recap .notes-field {
+  width: 100%;
+  margin: 0;
 }

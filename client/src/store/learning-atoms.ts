@@ -1,12 +1,16 @@
 /**
- * @fileOverview The atoms of the learning aids: the written proof and the glossary.
+ * @fileOverview The atoms of the learning aids: the written proof, the glossary and the world
+ * recap. Hints ("Show more help", replaying without hints) and notes are in `chat-atoms.ts`.
  */
 import { atom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
+import { atomFamily } from "jotai-family"
 import { atomWithQuery } from "jotai-tanstack-query"
-import { Doc, InventoryTile } from "../api/game-data"
-import { gameIdAtom } from "./location-atoms"
+import { Doc, InventoryTile, LevelInfo } from "../api/game-data"
+import { gameIdAtom, levelIdAtom, navigateAcrossWorldsAtom, worldIdAtom } from "./location-atoms"
 import { inventoryAtom, inventoryOverviewAtom, InventoryTab, inventoryTilesAtoms } from "./inventory-atoms"
+import { updateLevelProgressAtom } from "./progress-atoms"
+import { gameInfoAtom } from "./query-atoms"
 import { tacticKey } from "../utils/written-proof"
 
 // ---------------------------------------------------------------------------------------------
@@ -72,5 +76,34 @@ export const glossaryQueryAtom = atomWithQuery<GlossaryEntry[]>(get => {
       }
       return entry
     })),
+  }
+})
+
+// ---------------------------------------------------------------------------------------------
+// World recap
+
+/** The infos of all levels of a world (for the recap). */
+export const worldLevelsAtomFamily = atomFamily((worldId: string) => atomWithQuery<LevelInfo[]>(get => {
+  const gameId = get(gameIdAtom)
+  const size = get(gameInfoAtom).data?.worldSize?.[worldId] ?? 0
+  return {
+    queryKey: ['worldLevels', gameId, worldId, size],
+    enabled: size > 0,
+    queryFn: async () => Promise.all(Array.from({ length: size }, async (_, i) => {
+      const res = await fetch(`${window.location.origin}/data/${gameId}/level__${worldId}__${i + 1}.json`)
+      return res.json()
+    })),
+  }
+}))
+
+/** Replay a level without hints: start it again with an empty proof (it stays completed, and its
+ * notes are kept) and open it. */
+export const replayWithoutHintsAtom = atom(null, (get, set, worldId: string, levelId: number) => {
+  set(updateLevelProgressAtom, worldId, levelId, levelProgress => ({
+    ...levelProgress, code: "", selections: [], help: [], helpCount: undefined, noHints: true
+  }))
+  // If the level is open already, its editor follows the saved code (see `useLeanConnection`).
+  if (get(worldIdAtom) !== worldId || get(levelIdAtom) !== levelId) {
+    set(navigateAcrossWorldsAtom, worldId, levelId)
   }
 })
