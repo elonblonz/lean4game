@@ -40,6 +40,15 @@ const DEFAULT_PRODUCTION_POOL_GAMES = [
   "trequetrum/lean4game-logic",
 ]
 
+/**
+ * Open a level by editing the text after the header instead of reopening the document
+ * (`LEAN4GAME_STABLE_HEADER`). The header imports the whole game, so Lean keeps the imported
+ * environment when the player switches levels; but levels then also see what later levels of
+ * the game define (see `doc/server.md`). Default: on in development, off in production.
+ */
+const STABLE_HEADER = process.env.LEAN4GAME_STABLE_HEADER
+  ? process.env.LEAN4GAME_STABLE_HEADER === 'true' : isDevelopment
+
 export class GameManager {
   /** Spare Lean server processes per game (by tag), ready for the next player. */
   queue: { [tag: string]: ChildProcess[] }
@@ -170,6 +179,15 @@ export class GameManager {
     return fs.existsSync(dir) ? dir : null
   }
 
+  /**
+   * The game's root module (e.g. `Game`, which imports all the levels), given one level's
+   * module. Falls back to the level's module if there is no such file.
+   */
+  getRootModule(gameDir: string, levelModule: string) : string {
+    const root = levelModule.split('.')[0]
+    return fs.existsSync(path.join(gameDir, `${root}.lean`)) ? root : levelModule
+  }
+
   /** Whether the game's `GameServer` provides the `LevelScope` command (v4.31.0 and later). */
   gameServerHasLevelScope(gameDir: string) : boolean {
     const gameServerDir = this.getGameServerDir(gameDir)
@@ -251,7 +269,8 @@ export class GameManager {
     serverConnection: jsonrpcserver.IConnection,
     gameDir: string,
     usesCustomLeanServer: boolean,
-    onLevelOpened?: () => void
+    onLevelOpened?: () => void,
+    session?: { startedAt: number, fromPool: boolean }
   ) {
 
     let shift = (line: number, offset: number) => Math.max(0, line + offset)
@@ -317,22 +336,35 @@ export class GameManager {
     }
 
     const metadataUri = pathToFileURL(path.join(gameDir, 'Game', 'Metadata.lean')).href
+    const stableHeader = STABLE_HEADER && usesLevelScope
 
     /* The client has one document per level (`file:///<world>/<level>.lean`, see `level.tsx`),
        and keeps the ones it has visited open. Lean gets a single document, `Metadata.lean`
        with the level's header in front of the proof, so only one level is open in Lean at a
        time. We keep the text of every level the client has open; when the client works on
-       another level, we close the current one in Lean and open the other one in full. */
+       another level, we close the current one in Lean and open the other one in full.
+       With `STABLE_HEADER`, the header is the same for every level and we replace the text
+       of Lean's document instead, so that Lean keeps the imports. */
     const clientDocs = new Map<string, { text: string, version: number }>()
     /** The client URI of the level that is open in Lean. */
     let activeUri: string | undefined
     /** The client URI that messages from Lean are about (the last level opened in Lean). */
     let serverDocUri: string | undefined
+    /** Whether Lean has the document open (with `STABLE_HEADER` it stays open between levels). */
+    let leanDocOpen = false
+    /** The version of Lean's document. We number them ourselves: each of the client's levels has
+     * its own versions, while Lean's document has to count up across levels. */
+    let leanVersion = 0
+    /** The client's version of the level for each of Lean's versions since it was opened. */
+    const clientVersions = new Map<number, number>()
     /** The version the current level was opened in Lean with. Diagnostics and progress for
-     * older versions are from the previous level's worker, still on their way. */
+     * older versions are from the previous level, still on their way. */
     let openedVersion = 0
+    /** For the timing log: when the current level was sent to Lean, until Lean is done with it. */
+    let levelTiming: { uri: string, start: number, how: string } | undefined
+    let initializeId: number | string | undefined
 
-    /** The `didOpen` that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
+    /** The message that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
     const openInServer = (uri: string): object | undefined => {
       const doc = clientDocs.get(uri)!
       const pathParts = path.parse(new URL(uri).pathname)
@@ -349,26 +381,39 @@ export class GameManager {
       // the proof still starts on line `PROOF_START_LINE`.
       const levelIdArgs =
         `${JSON.stringify(gameData.name)} ${JSON.stringify(worldId)} ${levelId} `
+      // With `STABLE_HEADER` we import the whole game (its root module, e.g. `Game`) rather
+      // than the level's module, so the header is the same for every level.
+      const imported = stableHeader ? this.getRootModule(gameDir, levelData.module) : levelData.module
       const text =
-        `import ${levelData.module} import GameServer.Runner \n` +
+        `import ${imported} import GameServer.Runner \n` +
         (usesLevelScope ? `LevelScope ${levelIdArgs}` : ``) +
         `Runner ` + levelIdArgs +
         `(difficulty := ${difficulty}) ` +
         `(inventory := [${inventory.map(s => JSON.stringify(s)).join(',')}]) ` +
         `:= by\n${doc.text}\n`
       serverDocUri = uri
-      openedVersion = doc.version
+      openedVersion = ++leanVersion
+      clientVersions.clear()
+      clientVersions.set(leanVersion, doc.version)
+      const reuse = stableHeader && leanDocOpen
+      levelTiming = { uri, start: Date.now(), how: reuse ? 'header kept' : 'opened' }
+      leanDocOpen = true
+      if (reuse) {
+        return { jsonrpc: "2.0", method: "textDocument/didChange",
+          params: { textDocument: { uri: metadataUri, version: leanVersion }, contentChanges: [{ text }] } }
+      }
       return { jsonrpc: "2.0", method: "textDocument/didOpen",
-        params: { textDocument: { uri: metadataUri, languageId: "lean4", version: doc.version, text } } }
+        params: { textDocument: { uri: metadataUri, languageId: "lean4", version: leanVersion, text } } }
     }
 
     /** Make `uri` the level that is open in Lean; returns the messages Lean needs for that. */
     const activate = (uri: string): object[] => {
       const out: object[] = []
-      if (activeUri !== undefined) {
+      if (leanDocOpen && !stableHeader) {
         out.push({ jsonrpc: "2.0", method: "textDocument/didClose", params: { textDocument: { uri: metadataUri } } })
-        activeUri = undefined
+        leanDocOpen = false
       }
+      activeUri = undefined
       const open = openInServer(uri)
       if (open) {
         out.push(open)
@@ -387,6 +432,7 @@ export class GameManager {
     /** Translate one message from the client into the messages to send to Lean. */
     const fromClient = (message: any): object[] => {
       if (message.method === "initialize") {
+        initializeId = message.id
         const options = message.params?.initializationOptions ?? {}
         if (validDifficulty(options.difficulty)) difficulty = options.difficulty
         if (validInventory(options.inventory)) inventory = options.inventory
@@ -427,10 +473,15 @@ export class GameManager {
         doc.text = applyContentChanges(doc.text, params.contentChanges)
         doc.version = params.textDocument.version
         if (uri !== activeUri) return activate(uri!)  // sends the whole new text
+        params.textDocument.version = ++leanVersion
+        clientVersions.set(leanVersion, doc.version)
       } else if (message.method === "textDocument/didClose") {
         clientDocs.delete(uri!)
         if (uri !== activeUri) return []
         activeUri = undefined
+        // With `STABLE_HEADER`, Lean keeps the document (and its imports) for the next level.
+        if (stableHeader) return []
+        leanDocOpen = false
       } else if (message.method === "$/lean/rpc/connect" && uri !== undefined && uri !== activeUri) {
         // The client starts working on a level it opened before, without changing it.
         if (!clientDocs.has(uri)) { replyError(message, -32801, `Unknown document ${uri}`); return [] }
@@ -503,10 +554,29 @@ export class GameManager {
       // backwards compatibility for versions ≤ v4.7.0
       if (usesCustomLeanServer) return message
 
-      // Late diagnostics and progress of the previous level (see `openedVersion`).
-      const version = message.method === "textDocument/publishDiagnostics" ? message.params?.version
-        : message.method === "$/lean/fileProgress" ? message.params?.textDocument?.version : undefined
-      if (typeof version === 'number' && version < openedVersion) return undefined
+      if (initializeId !== undefined && message.id === initializeId && message.method === undefined) {
+        initializeId = undefined
+        if (session) {
+          console.info(`[${new Date()}] [timing] Lean server initialized ${Date.now() - session.startedAt} ms ` +
+            `after it was started (${session.fromPool ? 'spare' : 'new'})`)
+        }
+      }
+
+      // Late diagnostics and progress of the previous level (see `openedVersion`), and
+      // otherwise the client's version of the level instead of ours (see `leanVersion`).
+      const versioned = message.method === "textDocument/publishDiagnostics" ? message.params
+        : message.method === "$/lean/fileProgress" ? message.params?.textDocument : undefined
+      const version = versioned?.version
+      if (typeof version === 'number') {
+        if (version < openedVersion) return undefined
+        if (levelTiming && message.method === "$/lean/fileProgress" &&
+            Array.isArray(message.params.processing) && message.params.processing.length == 0) {
+          console.info(`[${new Date()}] [timing] ${levelTiming.uri}: Lean done ` +
+            `${Date.now() - levelTiming.start} ms after the level was sent (${levelTiming.how})`)
+          levelTiming = undefined
+        }
+        if (clientVersions.has(version)) versioned.version = clientVersions.get(version)
+      }
 
       shiftLines(message, -PROOF_START_LINE);
       if (serverDocUri !== undefined) replaceUri(message, serverDocUri)
