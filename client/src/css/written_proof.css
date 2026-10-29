@@ -95,3 +95,9 @@
 .written-proof-actions .btn {
   margin: 0;
 }
+
+/* "My proofs" (popup/proofs.tsx) */
+.proofs-popup h3 {
+  margin: 1.2em 0 .4em;
+  color: var(--clr-text);
+}
