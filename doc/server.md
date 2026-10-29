@@ -41,9 +41,11 @@ Environment variables of the relay (`relay/src`):
   this (default: 1024).
 - `LEAN_POOL_SIZE`: how many spare Lean servers to keep started per game, so that a new player
   does not wait for one to start (default: 1 in development, 0 in production; `0` disables the
-  pool). A spare has not imported the game yet, so it saves the start of the server (about a
-  second), not the import. Spares need memory too (about 1 GB each before a level is opened)
-  and do not count towards `MAX_SESSIONS`. They are stopped when the relay stops.
+  pool). A spare saves the start of the server (about a second); for games with
+  `LEAN4GAME_STABLE_HEADER` it also imports the game in advance, so the player's first level
+  starts as fast as a level switch. Spares need memory too (about 1 GB each, or as much as an
+  open level once they have imported the game) and do not count towards `MAX_SESSIONS`. They
+  are stopped when the relay stops.
 - `LEAN_POOL_GAMES`: the games to keep spares for, comma separated as `owner/repo` (default: in
   development the local games next to `lean4game`, played as `local/<folder>`; in production
   a few popular games).

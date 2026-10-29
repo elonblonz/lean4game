@@ -15,7 +15,24 @@ export type GameSession = {
   usesCustomLeanServer: boolean,
   /** When the Lean server was started, and whether it was a spare from the pool. */
   startedAt: number,
-  fromPool: boolean
+  fromPool: boolean,
+  /** If the spare has opened the game's header in Lean already (see `GameManager.warmUp`). */
+  warmUp?: WarmUp
+}
+
+/**
+ * A spare Lean server that has been initialized and has opened a document with the game's
+ * stable header, so that the game is imported before a player connects.
+ */
+export type WarmUp = {
+  /** The connection to the Lean server, for the session that takes the spare. */
+  connection: jsonrpcserver.IConnection,
+  /** The version of the document the spare opened. */
+  version: number,
+  /** Lean's answer to the `initialize` request we sent. */
+  initializeResult: Promise<any>,
+  /** The parameters of that request (the player's client does not get to send its own). */
+  initializeParams: any,
 }
 const environment = process.env.NODE_ENV;
 const isDevelopment = environment === 'development';
@@ -23,8 +40,9 @@ const noBwrap = process.env.NO_BWRAP == "true"
 
 /**
  * Spare Lean servers to keep ready per game (`LEAN_POOL_SIZE`, `0` disables the pool).
- * A spare has started `lake serve` but not opened a level yet, so this saves the start of the
- * server, not the import of the game. Default: 1 in development, 0 in production.
+ * A spare has started `lake serve`, which saves the start of the server; for games with
+ * `stableHeader` it has also imported the game (see `GameManager.warmUp`).
+ * Default: 1 in development, 0 in production.
  */
 const poolSizeSetting = parseInt(process.env.LEAN_POOL_SIZE ?? '')
 const POOL_SIZE = Number.isNaN(poolSizeSetting) ? (isDevelopment ? 1 : 0) : Math.max(0, poolSizeSetting)
@@ -52,6 +70,30 @@ const STABLE_HEADER_GAMES = STABLE_HEADER_SETTING.split(',').map(s => s.trim()).
 const usesStableHeader = (game: string) =>
   STABLE_HEADER_SETTING === 'true' || STABLE_HEADER_GAMES.includes(game.toLowerCase())
 
+/** The first line of Lean's document, which imports `module`. The level follows on the next lines. */
+const headerLine = (module: string) => `import ${module} import GameServer.Runner \n`
+
+/** The id of the `initialize` request we send to a spare (a string, so no client uses it). */
+const WARM_UP_INITIALIZE_ID = 'lean4game-warm-up'
+
+/**
+ * The `initialize` parameters for a spare until a client has sent its own (see
+ * `clientInitializeParams`): the parts that Lean uses, as the game's client sends them.
+ */
+const DEFAULT_INITIALIZE_PARAMS = {
+  processId: null,
+  capabilities: { textDocument: { completion: { completionItem: { insertReplaceSupport: true } } } },
+  initializationOptions: { hasWidgets: true },
+}
+
+/** The `initialize` parameters that Lean's behaviour depends on, to compare them. */
+const leanSettings = (params: any) => JSON.stringify([
+  params?.capabilities?.lean ?? null,
+  params?.capabilities?.textDocument?.completion?.completionItem?.insertReplaceSupport ?? null,
+  params?.initializationOptions?.hasWidgets ?? null,
+  params?.initializationOptions?.logCfg ?? null,
+])
+
 export class GameManager {
   /** Spare Lean server processes per game (by tag), ready for the next player. */
   queue: { [tag: string]: ChildProcess[] }
@@ -59,6 +101,10 @@ export class GameManager {
   processes: Set<ChildProcess>
   /** When each of these processes was started. */
   startTimes: WeakMap<ChildProcess, number>
+  /** The spares that have opened the game's header already (see `warmUp`). */
+  warmUps: WeakMap<ChildProcess, WarmUp>
+  /** The `initialize` parameters of the last client, for the spares we warm up next. */
+  clientInitializeParams: any
   urlRegEx: RegExp
   dir: string
 
@@ -66,6 +112,7 @@ export class GameManager {
     this.queue = {};
     this.processes = new Set();
     this.startTimes = new WeakMap();
+    this.warmUps = new WeakMap();
     this.urlRegEx = /^\/websocket\/g\/([\w.-]+)\/([\w.-]+)$/;
     this.dir = directory
   }
@@ -100,7 +147,8 @@ export class GameManager {
     const gameDir = this.getGameDir(reResTag.owner, reResTag.repo)
 
     return {process: ps, game: game, gameDir: gameDir, usesCustomLeanServer: customLeanServer !== null,
-      startedAt: this.startTimes.get(ps) ?? Date.now(), fromPool: spare !== undefined }
+      startedAt: this.startTimes.get(ps) ?? Date.now(), fromPool: spare !== undefined,
+      warmUp: spare && this.warmUps.get(spare) }
   }
 
   /** Start the spare Lean servers of the games in the pool (see `POOL_SIZE`). */
@@ -200,6 +248,85 @@ export class GameManager {
       fs.readFileSync(runnerPath, 'utf8').includes('elab "LevelScope"')
   }
 
+  /**
+   * The module that every level of a game imports with `stableHeader` (its root module), or
+   * `undefined` if the levels would not all import the same module.
+   */
+  getStableHeaderModule(gameDir: string) : string | undefined {
+    const dataDir = path.join(gameDir, '.lake', 'gamedata')
+    try {
+      const levelFile = fs.readdirSync(dataDir).find(f => /^level__.*\.json$/.test(f))
+      if (!levelFile) return undefined
+      const levelModule = JSON.parse(fs.readFileSync(path.join(dataDir, levelFile), 'utf8')).module
+      if (typeof levelModule !== 'string') return undefined
+      const root = this.getRootModule(gameDir, levelModule)
+      return root !== levelModule ? root : undefined
+    } catch (e) {
+      console.error(`[${new Date()}] Could not read the levels in ${dataDir}: ${e}`)
+      return undefined
+    }
+  }
+
+  /**
+   * Let a spare Lean server import the game before a player connects: initialize it and open
+   * `Metadata.lean` with just the header that every level of the game starts with (only for
+   * games with `stableHeader`). The player's first level then only replaces the text after the
+   * header (see `messageTranslation`). Until a session takes the spare, we answer Lean's
+   * requests and drop everything else it sends, e.g. the diagnostics of the warm-up.
+   * Returns `undefined` (and sends nothing) if the game's levels don't share a header.
+   */
+  warmUp(connection: jsonrpcserver.IConnection, gameDir: string, game: string): WarmUp | undefined {
+    if (!gameDir || !usesStableHeader(game) || !this.gameServerHasLevelScope(gameDir)) return undefined
+    const module = this.getStableHeaderModule(gameDir)
+    if (!module) return undefined
+    const gameData = JSON.parse(fs.readFileSync(path.join(gameDir, '.lake', 'gamedata', 'game.json'), 'utf8'))
+
+    let resolve: (result: any) => void, reject: (error: any) => void
+    const initializeResult = new Promise<any>((res, rej) => { resolve = res; reject = rej })
+    initializeResult.catch(() => {})  // passed on to the session's client, if there is one
+    /** Where messages from Lean go once a session has taken the spare. */
+    let handler: ((message: any) => void) | undefined
+    connection.reader.listen((message: any) => {
+      // The answer to our `initialize` can arrive after a session took the spare.
+      if (message?.id === WARM_UP_INITIALIZE_ID && message.method === undefined) {
+        if (message.error) reject(message.error)
+        else resolve(message.result)
+        return
+      }
+      if (handler) { handler(message); return }
+      // Requests from Lean (e.g. `client/registerCapability`) still need an answer.
+      if (message?.id !== undefined && message.method !== undefined) {
+        connection.writer.write({ jsonrpc: "2.0", id: message.id, result: null } as any)
+      }
+    })
+    const reader = {
+      listen: (callback: (message: any) => void) => { handler = callback; return { dispose: () => {} } },
+      onError: connection.reader.onError,
+      onClose: connection.reader.onClose,
+      onPartialMessage: connection.reader.onPartialMessage,
+      dispose: () => connection.reader.dispose(),
+    }
+
+    const initializeParams = {
+      ...(this.clientInitializeParams ?? DEFAULT_INITIALIZE_PARAMS),
+      // We abuse the rootUri field to pass the game name to the server (as for clients)
+      rootUri: gameData.name,
+    }
+    const version = 1
+    const metadataUri = pathToFileURL(path.join(gameDir, 'Game', 'Metadata.lean')).href
+    // Lean reads these one after the other, so they need not wait for its answers.
+    for (const message of [
+      { jsonrpc: "2.0", id: WARM_UP_INITIALIZE_ID, method: "initialize", params: initializeParams },
+      { jsonrpc: "2.0", method: "initialized", params: {} },
+      { jsonrpc: "2.0", method: "textDocument/didOpen",
+        params: { textDocument: { uri: metadataUri, languageId: "lean4", version, text: headerLine(module) } } },
+    ]) {
+      connection.writer.write(message as any)
+    }
+    console.info(`[${new Date()}] Spare Lean server for ${game} imports ${module}`)
+    return { connection: { ...connection, reader: reader as any }, version, initializeResult, initializeParams }
+  }
+
   createGameProcess(owner: string, repo: string, customLeanServer: string | null) {
     let game_dir = this.getGameDir(owner, repo);
     if (!game_dir) return;
@@ -255,13 +382,16 @@ export class GameManager {
     this.queue[tagString] ??= []
     while (this.queue[tagString].length < POOL_SIZE) {
       let serverProcess: cp.ChildProcessWithoutNullStreams;
-      serverProcess = this.createGameProcess(
-        tag.owner, tag.repo,
-        this.getCustomLeanServer(tag.owner, tag.repo)
-      );
+      const customLeanServer = this.getCustomLeanServer(tag.owner, tag.repo)
+      serverProcess = this.createGameProcess(tag.owner, tag.repo, customLeanServer);
       if (serverProcess == null) {
         console.error(`[${new Date()}] serverProcess was undefined/null`);
         return;
+      }
+      if (!customLeanServer) {
+        const warmUp = this.warmUp(jsonrpcserver.createProcessStreamConnection(serverProcess),
+          this.getGameDir(tag.owner, tag.repo), `${tag.owner}/${tag.repo}`)
+        if (warmUp) this.warmUps.set(serverProcess, warmUp)
       }
       this.queue[tagString].push(serverProcess);
     }
@@ -273,7 +403,7 @@ export class GameManager {
     gameDir: string,
     usesCustomLeanServer: boolean,
     onLevelOpened?: () => void,
-    session?: { game: string, startedAt: number, fromPool: boolean }
+    session?: { game: string, startedAt: number, fromPool: boolean, warmUp?: WarmUp }
   ) {
 
     let shift = (line: number, offset: number) => Math.max(0, line + offset)
@@ -378,6 +508,17 @@ export class GameManager {
     let levelTiming: { uri: string, start: number, how: string } | undefined
     let initializeId: number | string | undefined
 
+    /* A spare from the pool may have initialized Lean and opened its document with the header
+       already (see `warmUp`): the first level then replaces the text like a level switch. The
+       spare's version counts as a previous level's, so what Lean still reports about it is
+       dropped. */
+    const warmUp = session?.warmUp
+    if (warmUp) {
+      leanDocOpen = true
+      leanVersion = warmUp.version
+      openedVersion = warmUp.version + 1
+    }
+
     /** The message that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
     const openInServer = (uri: string): object | undefined => {
       const doc = clientDocs.get(uri)!
@@ -403,18 +544,20 @@ export class GameManager {
       // than the level's module, so the header is the same for every level.
       const imported = stableHeader ? this.getRootModule(gameDir, levelData.module) : levelData.module
       const text =
-        `import ${imported} import GameServer.Runner \n` +
+        headerLine(imported) +
         (usesLevelScope ? `LevelScope ${levelIdArgs}` : ``) +
         `Runner ` + levelIdArgs +
         `(difficulty := ${difficulty}) ` +
         `(inventory := [${inventory.map(s => JSON.stringify(s)).join(',')}]) ` +
         `:= by\n${doc.text}\n`
+      const preOpened = serverDocUri === undefined  // by the spare, if `leanDocOpen`
       serverDocUri = uri
       openedVersion = ++leanVersion
       clientVersions.clear()
       clientVersions.set(leanVersion, doc.version)
       const reuse = stableHeader && leanDocOpen
-      levelTiming = { uri, start: Date.now(), how: reuse ? 'header kept' : 'opened' }
+      levelTiming = { uri, start: Date.now(),
+        how: !reuse ? 'opened' : preOpened ? 'header pre-opened' : 'header kept' }
       leanDocOpen = true
       if (reuse) {
         return { jsonrpc: "2.0", method: "textDocument/didChange",
@@ -456,8 +599,36 @@ export class GameManager {
         if (validInventory(options.inventory)) inventory = options.inventory
         // We abuse the rootUri field to pass the game name to the server
         message.params.rootUri = gameData.name
+        // The spares we warm up from now on are initialized like this client (without the
+        // player's options).
+        const { difficulty: _difficulty, inventory: _inventory, ...initializationOptions } = options
+        this.clientInitializeParams = { ...message.params, initializationOptions }
+        if (warmUp) {
+          // Lean was initialized for the spare already: answer with what it answered then.
+          if (leanSettings(message.params) !== leanSettings(warmUp.initializeParams)) {
+            console.warn(`[${new Date()}] The client's initialize parameters differ from the spare's, ` +
+              `which Lean keeps: ${leanSettings(message.params)} vs. ${leanSettings(warmUp.initializeParams)}`)
+          }
+          const id = message.id
+          initializeId = undefined
+          warmUp.initializeResult.then(result => {
+            if (session) {
+              console.info(`[${new Date()}] [timing] Lean server initialized ${Date.now() - session.startedAt} ms ` +
+                `after it was started (spare, header pre-opened)`)
+            }
+            // (as if Lean had just sent it, e.g. to adjust its capabilities)
+            const out = fromServer({ jsonrpc: "2.0", id, result })
+            if (out !== undefined) socketConnection.writer.write(out as any)
+          }, error => {
+            socketConnection.writer.write({ jsonrpc: "2.0", id, error } as any)
+          })
+          return []
+        }
         return [message]
       }
+
+      // A spare's Lean server got our `initialized` already.
+      if (message.method === "initialized" && warmUp) return []
 
       if (message.method === "$/lean4game/options") {
         // The player's rules and inventory, which go into the level's header. The client can

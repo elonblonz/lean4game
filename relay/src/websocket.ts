@@ -140,7 +140,9 @@ export class GameSessionsObserver {
     const socketConnection = jsonrpcserver.createConnection(reader, writer, () => {
       ws.close()
     });
-    const serverConnection = jsonrpcserver.createProcessStreamConnection(this.players.get(ws).process);
+    // A spare that was warmed up (see `GameManager.warmUp`) is connected already.
+    const serverConnection = gameSession.warmUp?.connection ??
+      jsonrpcserver.createProcessStreamConnection(this.players.get(ws).process);
 
     let activityRecorded = false
     this.gameManager.messageTranslation(
@@ -153,7 +155,7 @@ export class GameSessionsObserver {
           .then(() => console.info("Recorded play activity for " + game))
           .catch(error => console.error("Failed to record play activity for " + game + ": " + error))
       },
-      { game, startedAt: gameSession.startedAt, fromPool: gameSession.fromPool }
+      { game, startedAt: gameSession.startedAt, fromPool: gameSession.fromPool, warmUp: gameSession.warmUp }
     )
 
     socketConnection.onClose(() => {
