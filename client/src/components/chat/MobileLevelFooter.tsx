@@ -8,6 +8,7 @@ import { gameInfoAtom, levelInfoAtom } from '../../store/query-atoms'
 import { proofAtom } from '../../store/editor-atoms'
 import { MoreHelpButton } from '../hints'
 import { NextLevelButton } from './ChatPanel'
+import { WrittenProof } from '../written_proof/WrittenProof'
 
 /**
  * On mobile there is no chat panel: the hints are shown inside the proof steps, and this
@@ -40,6 +41,7 @@ export function MobileLevelFooter() {
           <Markdown>{gT(levelInfo?.conclusion ?? "")}</Markdown>
         </div>
       }
+      <WrittenProof />
     </>}
     <div className="button-row mobile">
       {proof.completed && <NextLevelButton ref={focusRef} lastLevel={lastLevel} />}

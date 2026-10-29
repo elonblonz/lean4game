@@ -1,0 +1,53 @@
+/* The completed proof, written out (components/written_proof). */
+.written-proof {
+  margin: 10px 0;
+  padding: .6em .9em .7em;
+  border: 1px solid var(--clr-border-subtle, var(--clr-border));
+  border-left: 3px solid var(--clr-primary);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--clr-surface);
+  color: var(--clr-text);
+}
+
+.written-proof h4 {
+  margin: 0 0 .5em;
+  font-weight: 650;
+  color: var(--clr-text-secondary);
+}
+
+.written-proof .markdown p {
+  margin: 0;
+}
+
+.written-proof .markdown + .markdown,
+.written-proof .markdown + .written-proof-part,
+.written-proof-part + .markdown,
+.written-proof-part + .written-proof-part {
+  margin-top: .45em;
+}
+
+.written-proof-theorem {
+  margin-bottom: .5em;
+}
+
+/* Cases, directions and claims. */
+.written-proof-part {
+  margin-left: .2em;
+  padding-left: .8em;
+  border-left: 2px solid var(--clr-surface-strong);
+}
+
+.written-proof-qed {
+  text-align: right;
+  line-height: 1;
+}
+
+.written-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5em;
+  margin-top: .6em;
+}
+.written-proof-actions .btn {
+  margin: 0;
+}

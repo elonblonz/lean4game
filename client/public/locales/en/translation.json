@@ -140,5 +140,13 @@
   "No game is open.": "No game is open.",
   "The file could not be read.": "The file could not be read.",
   "Close": "Close",
-  "Menu": "Menu"
+  "Menu": "Menu",
+  "Your proof, written out": "Your proof, written out",
+  "Theorem.": "Theorem.",
+  "Proof.": "Proof.",
+  "Copy LaTeX": "Copy LaTeX",
+  "Copied!": "Copied!",
+  "Download .tex": "Download .tex",
+  "Copy the proof as a LaTeX document": "Copy the proof as a LaTeX document",
+  "Download the proof as a LaTeX file": "Download the proof as a LaTeX file"
 }

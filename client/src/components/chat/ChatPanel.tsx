@@ -13,6 +13,7 @@ import Markdown from 'react-markdown'
 import { faArrowRight, faHome } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Button } from '../button'
+import { WrittenProof } from '../written_proof/WrittenProof'
 
 /** "Next" button below the hints of a solved level, "Home" on the last level of a world. */
 export const NextLevelButton = React.forwardRef<HTMLButtonElement, {lastLevel: boolean}>(({lastLevel}, ref) => {
@@ -124,6 +125,7 @@ export function ChatPanel({lastLevel, visible = true}: {lastLevel: boolean, visi
               <Markdown>{gT(levelInfo?.conclusion ?? "")}</Markdown>
             </div>
           }
+          <WrittenProof />
         </>
       }
     </div>
