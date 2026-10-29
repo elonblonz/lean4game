@@ -38,8 +38,10 @@ export const uriAtom = atom(get => get(modelAtom)?.uri)
 /** The currently used RPC session */
 export const rpcSessionAtom = atom<RpcSessionAtPos>()
 
-/** The URI of the current level's document (each level has its own, see `PlayableLevel`). */
-export const levelUriAtom = atom(get => `file:///${get(worldIdAtom)}/${get(levelIdAtom)}.lean`)
+/** The URI of the current level's document (each level has its own, see `PlayableLevel`).
+ * All of them are in one folder: the editor starts a language client (a connection, with its
+ * own Lean server) per folder, and we want one for the whole game. */
+export const levelUriAtom = atom(get => `file:///levels/${get(worldIdAtom)}.${get(levelIdAtom)}.lean`)
 
 /** The version of the current level's text in the editor. */
 export const modelVersionAtom = atom<number | undefined>(undefined)
