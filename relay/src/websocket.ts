@@ -153,7 +153,7 @@ export class GameSessionsObserver {
           .then(() => console.info("Recorded play activity for " + game))
           .catch(error => console.error("Failed to record play activity for " + game + ": " + error))
       },
-      { startedAt: gameSession.startedAt, fromPool: gameSession.fromPool }
+      { game, startedAt: gameSession.startedAt, fromPool: gameSession.fromPool }
     )
 
     socketConnection.onClose(() => {

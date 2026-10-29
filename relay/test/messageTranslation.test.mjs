@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 // Read when the module is loaded.
-process.env.LEAN4GAME_STABLE_HEADER = 'true'
+process.env.LEAN4GAME_STABLE_HEADER = 'local/Other, local/TestGame'
 const { GameManager } = await import('../dist/src/serverProcess.js')
 
 /** A game directory with two levels and a `GameServer` that has `LevelScope`. */
@@ -25,12 +25,12 @@ function makeGame() {
 }
 
 /** Fake connections: `toServer`/`toClient` collect what the relay sends. */
-function connect(dir) {
+function connect(dir, game = 'local/testgame') {
   const toServer = [], toClient = []
   let fromClient, fromServer
   const socket = { reader: { listen: cb => { fromClient = cb } }, writer: { write: m => toClient.push(m) } }
   const server = { reader: { listen: cb => { fromServer = cb } }, writer: { write: m => toServer.push(m) } }
-  new GameManager(dir).messageTranslation(socket, server, dir, false)
+  new GameManager(dir).messageTranslation(socket, server, dir, false, undefined, { game, startedAt: 0, fromPool: false })
   return { toServer, toClient, client: m => fromClient(m), server: m => fromServer(m) }
 }
 
@@ -78,4 +78,14 @@ test('closing the level does not close the document in Lean', () => {
   c.client({ jsonrpc: '2.0', method: 'textDocument/didClose', params: { textDocument: { uri: 'file:///W/1.lean' } } })
   c.client(open(2, 1))
   assert.deepEqual(c.toServer.map(m => m.method), ['textDocument/didOpen', 'textDocument/didChange'])
+})
+
+test('games that are not listed reopen the document for each level', () => {
+  const c = connect(makeGame(), 'local/unlisted')
+  c.client(open(1, 1))
+  c.client(open(2, 1))
+  assert.deepEqual(c.toServer.map(m => m.method),
+    ['textDocument/didOpen', 'textDocument/didClose', 'textDocument/didOpen'])
+  assert.match(c.toServer[0].params.textDocument.text, /^import Game.Levels.W.L01 import GameServer.Runner/)
+  assert.match(c.toServer[2].params.textDocument.text, /^import Game.Levels.W.L02 import GameServer.Runner/)
 })

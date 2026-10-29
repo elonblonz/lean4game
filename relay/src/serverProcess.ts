@@ -41,13 +41,16 @@ const DEFAULT_PRODUCTION_POOL_GAMES = [
 ]
 
 /**
- * Open a level by editing the text after the header instead of reopening the document
- * (`LEAN4GAME_STABLE_HEADER`). The header imports the whole game, so Lean keeps the imported
+ * The games whose levels are opened by editing the text after the header instead of reopening
+ * the document (`LEAN4GAME_STABLE_HEADER`: `true` for all games, or a comma separated list of
+ * `owner/repo`; default: none). The header imports the whole game, so Lean keeps the imported
  * environment when the player switches levels; but levels then also see what later levels of
- * the game define (see `doc/server.md`). Default: on in development, off in production.
+ * the game define, which makes some levels trivial in some games (see `doc/server.md`).
  */
-const STABLE_HEADER = process.env.LEAN4GAME_STABLE_HEADER
-  ? process.env.LEAN4GAME_STABLE_HEADER === 'true' : isDevelopment
+const STABLE_HEADER_SETTING = (process.env.LEAN4GAME_STABLE_HEADER ?? '').trim().toLowerCase()
+const STABLE_HEADER_GAMES = STABLE_HEADER_SETTING.split(',').map(s => s.trim()).filter(s => s)
+const usesStableHeader = (game: string) =>
+  STABLE_HEADER_SETTING === 'true' || STABLE_HEADER_GAMES.includes(game.toLowerCase())
 
 export class GameManager {
   /** Spare Lean server processes per game (by tag), ready for the next player. */
@@ -270,7 +273,7 @@ export class GameManager {
     gameDir: string,
     usesCustomLeanServer: boolean,
     onLevelOpened?: () => void,
-    session?: { startedAt: number, fromPool: boolean }
+    session?: { game: string, startedAt: number, fromPool: boolean }
   ) {
 
     let shift = (line: number, offset: number) => Math.max(0, line + offset)
@@ -336,21 +339,21 @@ export class GameManager {
     }
 
     const metadataUri = pathToFileURL(path.join(gameDir, 'Game', 'Metadata.lean')).href
-    const stableHeader = STABLE_HEADER && usesLevelScope
+    const stableHeader = session !== undefined && usesStableHeader(session.game) && usesLevelScope
 
     /* The client has one document per level (`file:///<world>/<level>.lean`, see `level.tsx`),
        and keeps the ones it has visited open. Lean gets a single document, `Metadata.lean`
        with the level's header in front of the proof, so only one level is open in Lean at a
        time. We keep the text of every level the client has open; when the client works on
        another level, we close the current one in Lean and open the other one in full.
-       With `STABLE_HEADER`, the header is the same for every level and we replace the text
+       With `stableHeader`, the header is the same for every level and we replace the text
        of Lean's document instead, so that Lean keeps the imports. */
     const clientDocs = new Map<string, { text: string, version: number }>()
     /** The client URI of the level that is open in Lean. */
     let activeUri: string | undefined
     /** The client URI that messages from Lean are about (the last level opened in Lean). */
     let serverDocUri: string | undefined
-    /** Whether Lean has the document open (with `STABLE_HEADER` it stays open between levels). */
+    /** Whether Lean has the document open (with `stableHeader` it stays open between levels). */
     let leanDocOpen = false
     /** The version of Lean's document. We number them ourselves: each of the client's levels has
      * its own versions, while Lean's document has to count up across levels. */
@@ -381,7 +384,7 @@ export class GameManager {
       // the proof still starts on line `PROOF_START_LINE`.
       const levelIdArgs =
         `${JSON.stringify(gameData.name)} ${JSON.stringify(worldId)} ${levelId} `
-      // With `STABLE_HEADER` we import the whole game (its root module, e.g. `Game`) rather
+      // With `stableHeader` we import the whole game (its root module, e.g. `Game`) rather
       // than the level's module, so the header is the same for every level.
       const imported = stableHeader ? this.getRootModule(gameDir, levelData.module) : levelData.module
       const text =
@@ -479,7 +482,7 @@ export class GameManager {
         clientDocs.delete(uri!)
         if (uri !== activeUri) return []
         activeUri = undefined
-        // With `STABLE_HEADER`, Lean keeps the document (and its imports) for the next level.
+        // With `stableHeader`, Lean keeps the document (and its imports) for the next level.
         if (stableHeader) return []
         leanDocOpen = false
       } else if (message.method === "$/lean/rpc/connect" && uri !== undefined && uri !== activeUri) {
