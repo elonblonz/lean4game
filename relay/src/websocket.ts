@@ -152,7 +152,8 @@ export class GameSessionsObserver {
         gameActivityStore.recordPlay(owner, repo)
           .then(() => console.info("Recorded play activity for " + game))
           .catch(error => console.error("Failed to record play activity for " + game + ": " + error))
-      }
+      },
+      { game, startedAt: gameSession.startedAt, fromPool: gameSession.fromPool }
     )
 
     socketConnection.onClose(() => {

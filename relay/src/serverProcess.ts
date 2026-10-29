@@ -12,32 +12,60 @@ export type GameSession = {
   process: ChildProcess,
   game: string,
   gameDir: string,
-  usesCustomLeanServer: boolean
+  usesCustomLeanServer: boolean,
+  /** When the Lean server was started, and whether it was a spare from the pool. */
+  startedAt: number,
+  fromPool: boolean
 }
 const environment = process.env.NODE_ENV;
 const isDevelopment = environment === 'development';
 const noBwrap = process.env.NO_BWRAP == "true"
 
+/**
+ * Spare Lean servers to keep ready per game (`LEAN_POOL_SIZE`, `0` disables the pool).
+ * A spare has started `lake serve` but not opened a level yet, so this saves the start of the
+ * server, not the import of the game. Default: 1 in development, 0 in production.
+ */
+const poolSizeSetting = parseInt(process.env.LEAN_POOL_SIZE ?? '')
+const POOL_SIZE = Number.isNaN(poolSizeSetting) ? (isDevelopment ? 1 : 0) : Math.max(0, poolSizeSetting)
+/**
+ * The games to keep spares for (`LEAN_POOL_GAMES`, comma separated `owner/repo`).
+ * Default: in development the local games, in production a few popular games.
+ */
+const POOL_GAMES = (process.env.LEAN_POOL_GAMES ?? '').split(',').map(s => s.trim()).filter(s => s)
+const DEFAULT_PRODUCTION_POOL_GAMES = [
+  "hhu-adam/robo",
+  "leanprover-community/nng4",
+  "djvelleman/stg4",
+  "trequetrum/lean4game-logic",
+]
+
+/**
+ * The games whose levels are opened by editing the text after the header instead of reopening
+ * the document (`LEAN4GAME_STABLE_HEADER`: `true` for all games, or a comma separated list of
+ * `owner/repo`; default: none). The header imports the whole game, so Lean keeps the imported
+ * environment when the player switches levels; but levels then also see what later levels of
+ * the game define, which makes some levels trivial in some games (see `doc/server.md`).
+ */
+const STABLE_HEADER_SETTING = (process.env.LEAN4GAME_STABLE_HEADER ?? '').trim().toLowerCase()
+const STABLE_HEADER_GAMES = STABLE_HEADER_SETTING.split(',').map(s => s.trim()).filter(s => s)
+const usesStableHeader = (game: string) =>
+  STABLE_HEADER_SETTING === 'true' || STABLE_HEADER_GAMES.includes(game.toLowerCase())
+
 export class GameManager {
-  queueLength: {}
-  queue: {}
+  /** Spare Lean server processes per game (by tag), ready for the next player. */
+  queue: { [tag: string]: ChildProcess[] }
+  /** Every Lean server process we started that is still running (spares and sessions). */
+  processes: Set<ChildProcess>
+  /** When each of these processes was started. */
+  startTimes: WeakMap<ChildProcess, number>
   urlRegEx: RegExp
   dir: string
 
   constructor(directory: string) {
-    /**
-     * Add a game here if the server should keep a queue of pre-loaded games ready at all times.
-     *
-     * IMPORTANT! Tags here need to be lower case!
-    */
-    this.queueLength = {
-      "g/hhu-adam/robo": 2,
-      "g/leanprover-community/nng4": 5,
-      "g/djvelleman/stg4": 2,
-      "g/trequetrum/lean4game-logic": 2,
-    };
-    /** We keep queues of started Lean Server processes to be ready when a user arrives */
     this.queue = {};
+    this.processes = new Set();
+    this.startTimes = new WeakMap();
     this.urlRegEx = /^\/websocket\/g\/([\w.-]+)\/([\w.-]+)$/;
     this.dir = directory
   }
@@ -52,15 +80,17 @@ export class GameManager {
     const game = `${reResTag.owner}/${reResTag.repo}`
     const customLeanServer = this.getCustomLeanServer(reResTag.owner, reResTag.repo)
 
-    if (!this.queue[tag] || this.queue[tag].length == 0) {
-      ps = this.createGameProcess(reResTag.owner, reResTag.repo, customLeanServer);
-      // TODO (Matvey): extract further information from `req`, for example browser language.
-      console.log(`[${new Date()}] Socket opened by ${ip} on ${game}`);
+    // TODO (Matvey): extract further information from `req`, for example browser language.
+    console.log(`[${new Date()}] Socket opened by ${ip} on ${game}`);
+    const spare = this.queue[tag]?.shift()  // the oldest spare is the most likely to be ready
+    if (spare) {
+      console.info(`[${new Date()}] Using a spare Lean server for ${game}`)
+      ps = spare
     } else {
-      console.info('Got process from the queue');
-      ps = this.queue[tag].shift(); // Pick the first Lean process; it's likely to be ready immediately
-      this.fillQueue(reResTag);
+      ps = this.createGameProcess(reResTag.owner, reResTag.repo, customLeanServer);
     }
+    // Replace the spare (or one that died) if the game is in the pool.
+    if (this.queue[tag]) this.fillQueue(reResTag)
 
     if (ps == null) {
       console.error(`[${new Date()}]server process is undefined/null`);
@@ -69,7 +99,48 @@ export class GameManager {
 
     const gameDir = this.getGameDir(reResTag.owner, reResTag.repo)
 
-    return {process: ps, game: game, gameDir: gameDir, usesCustomLeanServer: customLeanServer !== null }
+    return {process: ps, game: game, gameDir: gameDir, usesCustomLeanServer: customLeanServer !== null,
+      startedAt: this.startTimes.get(ps) ?? Date.now(), fromPool: spare !== undefined }
+  }
+
+  /** Start the spare Lean servers of the games in the pool (see `POOL_SIZE`). */
+  startPool() {
+    if (POOL_SIZE == 0) return
+    let games = POOL_GAMES
+    if (games.length == 0) {
+      games = isDevelopment ? this.getLocalGames().map(repo => `local/${repo}`) : DEFAULT_PRODUCTION_POOL_GAMES
+    }
+    for (const game of games) {
+      const [owner, repo] = game.split('/', 2)
+      if (!owner || !repo || !this.getGameDir(owner, repo)) {
+        console.warn(`[${new Date()}] Not keeping spare Lean servers for unknown game ${game}`)
+        continue
+      }
+      console.info(`[${new Date()}] Keeping ${POOL_SIZE} spare Lean server(s) for ${game}`)
+      this.fillQueue({ owner, repo })
+    }
+  }
+
+  /** The games next to the `lean4game` folder, played as `g/local/<folder>` in development. */
+  getLocalGames(): string[] {
+    const baseDir = path.join(this.dir, '..', '..', '..', '..')
+    try {
+      return fs.readdirSync(baseDir, { withFileTypes: true })
+        .filter(e => e.isDirectory() && /^[A-Za-z0-9_.-]+$/.test(e.name) &&
+          fs.existsSync(path.join(baseDir, e.name, '.lake', 'gamedata', 'game.json')))
+        .map(e => e.name)
+    } catch (e) {
+      console.error(`[${new Date()}] Could not look for local games in ${baseDir}: ${e}`)
+      return []
+    }
+  }
+
+  /** Stop all Lean servers we started (spares and sessions), e.g. when the relay shuts down. */
+  shutdown() {
+    this.queue = {}
+    for (const ps of this.processes) {
+      try { ps.kill() } catch (e) { /* already gone */ }
+    }
   }
 
   getCustomLeanServer(owner, repo) : string | null {
@@ -111,6 +182,15 @@ export class GameManager {
     return fs.existsSync(dir) ? dir : null
   }
 
+  /**
+   * The game's root module (e.g. `Game`, which imports all the levels), given one level's
+   * module. Falls back to the level's module if there is no such file.
+   */
+  getRootModule(gameDir: string, levelModule: string) : string {
+    const root = levelModule.split('.')[0]
+    return fs.existsSync(path.join(gameDir, `${root}.lean`)) ? root : levelModule
+  }
+
   /** Whether the game's `GameServer` provides the `LevelScope` command (v4.31.0 and later). */
   gameServerHasLevelScope(gameDir: string) : boolean {
     const gameServerDir = this.getGameServerDir(gameDir)
@@ -150,6 +230,15 @@ export class GameManager {
         { cwd: this.dir });
     }
 
+    this.startTimes.set(serverProcess, Date.now())
+    this.processes.add(serverProcess)
+    serverProcess.on('exit', () => {
+      this.processes.delete(serverProcess)
+      // A spare that died (e.g. killed from outside) must not be handed to a player.
+      for (const tag in this.queue) {
+        this.queue[tag] = this.queue[tag].filter(ps => ps !== serverProcess)
+      }
+    })
     serverProcess.on('error', error => console.error(`[${new Date()}] Launching Lean Server failed: ${error}`));
     if (serverProcess.stderr !== null) {
       serverProcess.stderr.on('data', data => console.error(`[${new Date()}] Lean Server: ${data}`)
@@ -163,7 +252,8 @@ export class GameManager {
    */
   fillQueue(tag: { owner: string; repo: string; }) {
     const tagString = this.getTagString(tag);
-    while (this.queue[tagString].length < this.queueLength[tagString]) {
+    this.queue[tagString] ??= []
+    while (this.queue[tagString].length < POOL_SIZE) {
       let serverProcess: cp.ChildProcessWithoutNullStreams;
       serverProcess = this.createGameProcess(
         tag.owner, tag.repo,
@@ -182,7 +272,8 @@ export class GameManager {
     serverConnection: jsonrpcserver.IConnection,
     gameDir: string,
     usesCustomLeanServer: boolean,
-    onLevelOpened?: () => void
+    onLevelOpened?: () => void,
+    session?: { game: string, startedAt: number, fromPool: boolean }
   ) {
 
     let shift = (line: number, offset: number) => Math.max(0, line + offset)
@@ -248,22 +339,35 @@ export class GameManager {
     }
 
     const metadataUri = pathToFileURL(path.join(gameDir, 'Game', 'Metadata.lean')).href
+    const stableHeader = session !== undefined && usesStableHeader(session.game) && usesLevelScope
 
     /* The client has one document per level (`file:///<world>/<level>.lean`, see `level.tsx`),
        and keeps the ones it has visited open. Lean gets a single document, `Metadata.lean`
        with the level's header in front of the proof, so only one level is open in Lean at a
        time. We keep the text of every level the client has open; when the client works on
-       another level, we close the current one in Lean and open the other one in full. */
+       another level, we close the current one in Lean and open the other one in full.
+       With `stableHeader`, the header is the same for every level and we replace the text
+       of Lean's document instead, so that Lean keeps the imports. */
     const clientDocs = new Map<string, { text: string, version: number }>()
     /** The client URI of the level that is open in Lean. */
     let activeUri: string | undefined
     /** The client URI that messages from Lean are about (the last level opened in Lean). */
     let serverDocUri: string | undefined
+    /** Whether Lean has the document open (with `stableHeader` it stays open between levels). */
+    let leanDocOpen = false
+    /** The version of Lean's document. We number them ourselves: each of the client's levels has
+     * its own versions, while Lean's document has to count up across levels. */
+    let leanVersion = 0
+    /** The client's version of the level for each of Lean's versions since it was opened. */
+    const clientVersions = new Map<number, number>()
     /** The version the current level was opened in Lean with. Diagnostics and progress for
-     * older versions are from the previous level's worker, still on their way. */
+     * older versions are from the previous level, still on their way. */
     let openedVersion = 0
+    /** For the timing log: when the current level was sent to Lean, until Lean is done with it. */
+    let levelTiming: { uri: string, start: number, how: string } | undefined
+    let initializeId: number | string | undefined
 
-    /** The `didOpen` that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
+    /** The message that opens the client's level `uri` in Lean, or `undefined` if the level doesn't exist. */
     const openInServer = (uri: string): object | undefined => {
       const doc = clientDocs.get(uri)!
       const pathParts = path.parse(new URL(uri).pathname)
@@ -280,26 +384,39 @@ export class GameManager {
       // the proof still starts on line `PROOF_START_LINE`.
       const levelIdArgs =
         `${JSON.stringify(gameData.name)} ${JSON.stringify(worldId)} ${levelId} `
+      // With `stableHeader` we import the whole game (its root module, e.g. `Game`) rather
+      // than the level's module, so the header is the same for every level.
+      const imported = stableHeader ? this.getRootModule(gameDir, levelData.module) : levelData.module
       const text =
-        `import ${levelData.module} import GameServer.Runner \n` +
+        `import ${imported} import GameServer.Runner \n` +
         (usesLevelScope ? `LevelScope ${levelIdArgs}` : ``) +
         `Runner ` + levelIdArgs +
         `(difficulty := ${difficulty}) ` +
         `(inventory := [${inventory.map(s => JSON.stringify(s)).join(',')}]) ` +
         `:= by\n${doc.text}\n`
       serverDocUri = uri
-      openedVersion = doc.version
+      openedVersion = ++leanVersion
+      clientVersions.clear()
+      clientVersions.set(leanVersion, doc.version)
+      const reuse = stableHeader && leanDocOpen
+      levelTiming = { uri, start: Date.now(), how: reuse ? 'header kept' : 'opened' }
+      leanDocOpen = true
+      if (reuse) {
+        return { jsonrpc: "2.0", method: "textDocument/didChange",
+          params: { textDocument: { uri: metadataUri, version: leanVersion }, contentChanges: [{ text }] } }
+      }
       return { jsonrpc: "2.0", method: "textDocument/didOpen",
-        params: { textDocument: { uri: metadataUri, languageId: "lean4", version: doc.version, text } } }
+        params: { textDocument: { uri: metadataUri, languageId: "lean4", version: leanVersion, text } } }
     }
 
     /** Make `uri` the level that is open in Lean; returns the messages Lean needs for that. */
     const activate = (uri: string): object[] => {
       const out: object[] = []
-      if (activeUri !== undefined) {
+      if (leanDocOpen && !stableHeader) {
         out.push({ jsonrpc: "2.0", method: "textDocument/didClose", params: { textDocument: { uri: metadataUri } } })
-        activeUri = undefined
+        leanDocOpen = false
       }
+      activeUri = undefined
       const open = openInServer(uri)
       if (open) {
         out.push(open)
@@ -318,6 +435,7 @@ export class GameManager {
     /** Translate one message from the client into the messages to send to Lean. */
     const fromClient = (message: any): object[] => {
       if (message.method === "initialize") {
+        initializeId = message.id
         const options = message.params?.initializationOptions ?? {}
         if (validDifficulty(options.difficulty)) difficulty = options.difficulty
         if (validInventory(options.inventory)) inventory = options.inventory
@@ -358,10 +476,15 @@ export class GameManager {
         doc.text = applyContentChanges(doc.text, params.contentChanges)
         doc.version = params.textDocument.version
         if (uri !== activeUri) return activate(uri!)  // sends the whole new text
+        params.textDocument.version = ++leanVersion
+        clientVersions.set(leanVersion, doc.version)
       } else if (message.method === "textDocument/didClose") {
         clientDocs.delete(uri!)
         if (uri !== activeUri) return []
         activeUri = undefined
+        // With `stableHeader`, Lean keeps the document (and its imports) for the next level.
+        if (stableHeader) return []
+        leanDocOpen = false
       } else if (message.method === "$/lean/rpc/connect" && uri !== undefined && uri !== activeUri) {
         // The client starts working on a level it opened before, without changing it.
         if (!clientDocs.has(uri)) { replyError(message, -32801, `Unknown document ${uri}`); return [] }
@@ -434,10 +557,29 @@ export class GameManager {
       // backwards compatibility for versions ≤ v4.7.0
       if (usesCustomLeanServer) return message
 
-      // Late diagnostics and progress of the previous level (see `openedVersion`).
-      const version = message.method === "textDocument/publishDiagnostics" ? message.params?.version
-        : message.method === "$/lean/fileProgress" ? message.params?.textDocument?.version : undefined
-      if (typeof version === 'number' && version < openedVersion) return undefined
+      if (initializeId !== undefined && message.id === initializeId && message.method === undefined) {
+        initializeId = undefined
+        if (session) {
+          console.info(`[${new Date()}] [timing] Lean server initialized ${Date.now() - session.startedAt} ms ` +
+            `after it was started (${session.fromPool ? 'spare' : 'new'})`)
+        }
+      }
+
+      // Late diagnostics and progress of the previous level (see `openedVersion`), and
+      // otherwise the client's version of the level instead of ours (see `leanVersion`).
+      const versioned = message.method === "textDocument/publishDiagnostics" ? message.params
+        : message.method === "$/lean/fileProgress" ? message.params?.textDocument : undefined
+      const version = versioned?.version
+      if (typeof version === 'number') {
+        if (version < openedVersion) return undefined
+        if (levelTiming && message.method === "$/lean/fileProgress" &&
+            Array.isArray(message.params.processing) && message.params.processing.length == 0) {
+          console.info(`[${new Date()}] [timing] ${levelTiming.uri}: Lean done ` +
+            `${Date.now() - levelTiming.start} ms after the level was sent (${levelTiming.how})`)
+          levelTiming = undefined
+        }
+        if (clientVersions.has(version)) versioned.version = clientVersions.get(version)
+      }
 
       shiftLines(message, -PROOF_START_LINE);
       if (serverDocUri !== undefined) replaceUri(message, serverDocUri)

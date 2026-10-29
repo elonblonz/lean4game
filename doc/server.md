@@ -39,6 +39,28 @@ Environment variables of the relay (`relay/src`):
 - `API_PORT`: the port of the statistics API. It only listens on `127.0.0.1`, and only if set.
 - `RESERVED_DISC_SPACE_MB`: imports are refused if they would leave less free disk space than
   this (default: 1024).
+- `LEAN_POOL_SIZE`: how many spare Lean servers to keep started per game, so that a new player
+  does not wait for one to start (default: 1 in development, 0 in production; `0` disables the
+  pool). A spare has not imported the game yet, so it saves the start of the server (about a
+  second), not the import. Spares need memory too (about 1 GB each before a level is opened)
+  and do not count towards `MAX_SESSIONS`. They are stopped when the relay stops.
+- `LEAN_POOL_GAMES`: the games to keep spares for, comma separated as `owner/repo` (default: in
+  development the local games next to `lean4game`, played as `local/<folder>`; in production
+  a few popular games).
+- `LEAN4GAME_STABLE_HEADER`: the games for which Lean keeps its imports when the player
+  switches levels, as a comma separated list of `owner/repo` (e.g. `local/STG4`), or `true` for
+  all games (default: none). Otherwise each level is opened with
+  `import <the level's module>`, so every switch imports the game again (about 2-3 s for a
+  game on Mathlib). For the listed games every level imports the whole game (its root module,
+  e.g. `Game`), and switching levels only replaces the text after the imports (about 0.2 s).
+  The catch: a level also sees everything later levels define, so only list games for which
+  that is harmless. Definitions are not locked by the inventory, so a level can become
+  trivial: in Reintroduction to Proofs, `exact Function.swap` (defined in a later level)
+  solves the level that asks you to define it. A theorem proven in a later level is reported
+  as locked under the regular and strict rules (instead of unknown), but can be used under
+  relaxed rules; a name can resolve differently if a later level defines it; and instances,
+  `simp` lemmas and notation declared in a later level apply everywhere. Needs a `GameServer`
+  with `LevelScope` (v4.31.0 or later); older ones always reopen the level.
 
 Lean runs the players' proofs, and Lean code can run programs. In production, Lean runs inside
 `bubblewrap` (`relay/scripts/bubblewrap.sh`: no network, read-only game files, a CPU time limit).

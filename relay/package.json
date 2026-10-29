@@ -22,6 +22,6 @@
     "dev": "(tsc -b .) && (cross-env NODE_ENV=development nodemon -e mjs --exec \"node ./dist/src/index.js\")",
     "prod": "cross-env NODE_ENV=production node ./dist/src/index.js",
     "build": "tsc -b .",
-    "test": "tsc -b . && node --test test/"
+    "test": "tsc -b . && node --test test/*.test.mjs"
   }
 }
