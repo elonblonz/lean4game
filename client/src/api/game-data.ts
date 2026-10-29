@@ -51,7 +51,10 @@ export interface InventoryTile {
   altTitle: string,
   world : string|null,
   level : number|null,
-  proven : boolean
+  proven : boolean,
+  /** Tactics only, optional: how a step using the tactic reads in a written proof
+   * (`TacticDoc intro reads "..."`, see `utils/written-proof.ts`). Missing in older games. */
+  readsAs?: string|null
 }
 
 export interface LevelInfo {
@@ -86,4 +89,6 @@ export interface Doc {
   statement: string,
   type: string, // TODO: can I remove these?
   category: string,
+  /** See `InventoryTile.readsAs`. */
+  readsAs?: string|null,
 }

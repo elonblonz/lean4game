@@ -151,5 +151,8 @@
   "Reduced (no transitions, no blinking cursor)": "Reduced (no transitions, no blinking cursor)",
   "Full": "Full",
   "Hint {{n}} of {{total}}": "Hint {{n}} of {{total}}",
-  "Next hint ({{n}} of {{total}})": "Next hint ({{n}} of {{total}})"
+  "Next hint ({{n}} of {{total}})": "Next hint ({{n}} of {{total}})",
+  "Written proof": "Written proof",
+  "nothing": "nothing",
+  "Your proof, in words, appears here as you write it.": "Your proof, in words, appears here as you write it."
 }
