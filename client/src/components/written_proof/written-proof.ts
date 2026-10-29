@@ -32,7 +32,14 @@ export interface WrittenProof {
   /** The theorem, as text with `$...$` maths. */
   statement: string
   lines: Line[]
+  /** The (full) names of the theorems from the inventory that the proof uses. */
+  theorems?: string[]
+  /** For a collection of proofs: the world's title, to group them by. */
+  world?: string
 }
+
+/** A theorem from the inventory: its names, and its statement (`(h : a ⊆ b) : ...`) if known. */
+export interface TheoremInfo { name: string, displayName: string, statement?: string }
 
 // ---------------------------------------------------------------------------------------------
 // Expressions
@@ -194,12 +201,22 @@ type Scope = Map<string, number>
 class Writer {
   private n = 0
   private explained = new Set<string>()
+  /** Full names of the inventory theorems used. */
+  used = new Set<string>()
 
-  constructor(private steps: Map<string, Step>, private theorems: Map<string, string>) {}
+  constructor(private steps: Map<string, Step>, private theorems: TheoremInfo[]) {}
 
+  /** How to cite a theorem: its name, and the first time also what it says. */
   theorem(name: string): string {
-    const shown = this.theorems.get(name)
-    return shown && shown !== name ? `the theorem "${shown}"` : `the theorem ${codeName(name)}`
+    const info = this.theorems.find(t => t.name === name || t.displayName === name) ??
+      this.theorems.find(t => t.name.endsWith('.' + name))
+    if (!info) return `the theorem ${codeName(name)}`
+    const cited = `the theorem ${codeName(info.displayName)}`
+    // The rules of logic (`And.intro`, ...) are explained by the lines themselves.
+    if (this.used.has(info.name) || /^(And|Or|Iff|Exists)\./.test(info.name)) return cited
+    this.used.add(info.name)
+    const says = info.statement ? theoremSays(info.statement) : undefined
+    return says ? `${cited} (${says})` : cited
   }
 
   /** Write a numbered line; the first time a statement like `A ⊆ B` appears, say what it means. */
@@ -242,8 +259,8 @@ class Writer {
   }
 
   /** Justify `stmt` by the proof term `term`: one line per inference. */
-  derive(out: Line[], stmt: string, term: string, goal: InteractiveGoal, scope: Scope, step: number): number {
-    const expected = parse(stmt)
+  derive(out: Line[], stmt: string | Expr, term: string, goal: InteractiveGoal, scope: Scope, step: number): number {
+    const expected = typeof stmt === 'string' ? parse(stmt) : stmt
     const env = this.env(goal, scope, out, step)
     const d = explainTerm(term, expected, env)
     if (d?.line !== undefined && d.stmt && expected && equal(d.stmt, expected)) return d.line
@@ -467,6 +484,15 @@ class Writer {
       case 'apply': {
         if (/^Iff\.intro$/.test(term)) { this.parts(step, 'directions', scope, out); return }
         if (/^And\.intro$/.test(term)) { this.parts(step, 'parts', scope, out); return }
+        const firstPart = term.match(/^And\.intro (\S+)$/)
+        if (firstPart && kids.length === 1 && ge?.kind === 'bin' && ge.op === '∧') {
+          // `apply And.intro h`: the first part is known, the second is left to show.
+          const sc = new Map(scope)
+          const n = this.derive(out, ge.left, firstPart[1], step.goal, sc, i)
+          this.note(out, `So to show ${say(g)}, it remains to show that ${say(goalText(next))} (we have the first part, line ${n}).`, i)
+          this.go(next, sc, out, i)
+          return
+        }
         const exists = term.match(/^Exists\.intro (\S+)(.*)$/)
         if (exists && kids.length) { this.take(step, exists[1], scope, out); return }
         if (/^Or\.in[lr]$/.test(term)) {
@@ -499,7 +525,7 @@ class Writer {
           this.go(c, new Map(sc), block.lines, i)
           out.push(block)
         })
-        this.note(out, `So, by ${by}, ${say(g)}.`, i)
+        this.note(out, `So, by ${f ? by : this.theorem(head)}, ${say(g)}.`, i)  // (named again: short)
         return
       }
 
@@ -537,6 +563,41 @@ class Writer {
   }
 }
 
+/**
+ * What a theorem says, from its statement as the game shows it:
+ * `{α} {a b} (h₁ : a ⊆ b) (h₂ : b ⊆ a) : a = b` says "if $a \subseteq b$ and $b \subseteq a$,
+ * then $a = b$", and `{U} (A B : Set U) : A ∩ B ⊆ B ∩ A` says "$A \cap B \subseteq B \cap A$".
+ */
+export function theoremSays(statement: string): string | undefined {
+  // The binders `(...)`, `{...}`, `[...]` before the last ` : `, at the top level.
+  const assumptions: Expr[] = []
+  let depth = 0, start = -1, colon = -1
+  for (let k = 0; k < statement.length; k++) {
+    const c = statement[k]
+    if ('({['.includes(c)) { if (depth === 0) start = k; depth++ }
+    else if (')}]'.includes(c)) {
+      depth--
+      if (depth === 0 && statement[start] === '(') {
+        const inner = statement.slice(start + 1, k)
+        const sep = inner.indexOf(' : ')
+        const type = sep >= 0 ? parse(inner.slice(sep + 3)) : undefined
+        if (type && isProposition(type)) assumptions.push(type)
+      }
+    } else if (depth === 0 && c === ':' ) colon = k
+  }
+  if (colon < 0) return undefined
+  const conclusion = parse(statement.slice(colon + 1))
+  if (!conclusion) return undefined
+  return assumptions.length
+    ? `if ${list(assumptions.map(a => words(a)))}, then ${words(conclusion)}`
+    : words(conclusion)
+}
+
+/** Whether an expression is a statement (rather than a type such as `Set U`). */
+function isProposition(e: Expr): boolean {
+  return e.kind === 'bin' || e.kind === 'not' || e.kind === 'binder'
+}
+
 /** "from 1 and 3: every element of $A$ is an element of $B$" */
 function why(d: Pick<Derived, 'refs' | 'by' | 'explain'>): string {
   const parts: string[] = []
@@ -548,11 +609,11 @@ function why(d: Pick<Derived, 'refs' | 'by' | 'explain'>): string {
 
 /** The written proof of a completed level, or `undefined` if there is nothing to write. */
 export function writtenProof(state: ProofState, level: {
-  title?: string | null, descrText?: string | null, theorems?: { name: string, displayName: string }[]
+  title?: string | null, descrText?: string | null, theorems?: TheoremInfo[]
 }): WrittenProof | undefined {
   const start = state.steps[0]?.goals[0]?.goal
   if (!start) return undefined
-  const w = new Writer(stepsByGoal(state), new Map((level.theorems ?? []).map(t => [t.name, t.displayName])))
+  const w = new Writer(stepsByGoal(state), level.theorems ?? [])
   const lines: Line[] = []
   const scope: Scope = new Map()
   w.catchUp(start, scope, lines, 'given')
@@ -562,6 +623,7 @@ export function writtenProof(state: ProofState, level: {
     title: level.title ?? '',
     statement: latexMath((level.descrText ?? math(goalText(start))).trim()),
     lines,
+    theorems: [...w.used],
   }
 }
 
@@ -597,8 +659,11 @@ function linesToLatex(lines: Line[], indent = ''): string {
 
 /** A standalone LaTeX document with the proofs. */
 export function toLatexDocument(proofs: WrittenProof[], title: string): string {
+  let world: string | undefined
   const body = proofs.map(p => [
-    `\\section*{${markdownToLatex(p.title)}}`,
+    // Grouped by world, if they come from several.
+    ...(p.world && p.world !== world ? [`\\section*{${markdownToLatex((world = p.world))}}`] : []),
+    `\\${p.world ? 'subsection' : 'section'}*{${markdownToLatex(p.title)}}`,
     `\\begin{theorem}`,
     markdownToLatex(p.statement),
     `\\end{theorem}`,

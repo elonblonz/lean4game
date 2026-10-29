@@ -148,5 +148,15 @@
   "Copied!": "Copied!",
   "Download .tex": "Download .tex",
   "Copy the proof as a LaTeX document": "Copy the proof as a LaTeX document",
-  "Download the proof as a LaTeX file": "Download the proof as a LaTeX file"
+  "Download the proof as a LaTeX file": "Download the proof as a LaTeX file",
+  "All my proofs": "All my proofs",
+  "My proofs": "My proofs",
+  "my proofs": "my proofs",
+  "All the proofs you have completed, written out": "All the proofs you have completed, written out",
+  "Proofs you complete appear here, written out as a mathematician would write them.": "Proofs you complete appear here, written out as a mathematician would write them.",
+  "Every proof you have completed, written out.": "Every proof you have completed, written out.",
+  "Download all your proofs as one LaTeX file": "Download all your proofs as one LaTeX file",
+  "Download all (.tex)": "Download all (.tex)",
+  "Level {{n}}": "Level {{n}}",
+  "Show the step of your proof this comes from": "Show the step of your proof this comes from"
 }

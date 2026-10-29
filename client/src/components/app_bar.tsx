@@ -3,7 +3,7 @@
  */
 import * as React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownload, faUpload, faEraser, faBook, faBookOpen, faGlobe, faHome,
+import { faDownload, faUpload, faEraser, faBook, faBookOpen, faGlobe, faHome, faFeatherPointed,
   faArrowRight, faArrowLeft, faXmark, faBars, faCode,
   faCircleInfo, faTerminal, faGear } from '@fortawesome/free-solid-svg-icons'
 import { Button } from './button'
@@ -237,6 +237,15 @@ function GameInfoButton() {
   </Button>
 }
 
+function ProofsButton() {
+  const [, closeNav] = useAtom(closeNavAtom)
+  const [, setPopup] = useAtom(popupAtom)
+  const { t } = useTranslation()
+  return <Button title={t("All the proofs you have completed, written out")} inverted={true} onClick={() => {setPopup(PopupType.proofs); closeNav()}}>
+    <FontAwesomeIcon icon={faFeatherPointed} />&nbsp;{t("My proofs")}
+  </Button>
+}
+
 function EraseButton () {
   const [, closeNav] = useAtom(closeNavAtom)
   const [, setPopup] = useAtom(popupAtom)
@@ -323,6 +332,7 @@ export function WelcomeAppBar({pageNumber, setPageNumber} : {
     <LanguageDropdown />
     <div className={'menu dropdown' + (navOpen ? '' : ' hidden')}>
       <GameInfoButton />
+      <ProofsButton />
       <DownloadButton />
       <UploadButton />
       <EraseButton />
@@ -366,6 +376,7 @@ export function LevelAppBar({isLoading, levelTitle, pageNumber=1, setPageNumber=
           <HomeButton isDropdown={true} />
           <InputModeButton isDropdown={true}/>
           <GameInfoButton />
+          <ProofsButton />
           <ImpressumButton isDropdown={true} />
           <PrivacyButton isDropdown={true} />
           <EraseButton />
@@ -391,6 +402,7 @@ export function LevelAppBar({isLoading, levelTitle, pageNumber=1, setPageNumber=
         <LanguageDropdown />
         <div className={'menu dropdown' + (navOpen ? '' : ' hidden')}>
           <GameInfoButton />
+          <ProofsButton />
           <ImpressumButton isDropdown={true} />
           <PrivacyButton isDropdown={true} />
           <EraseButton />

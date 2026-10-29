@@ -10,6 +10,7 @@ import { popupAtom } from '../../store/popup-atoms'
 import { gameIdAtom, levelIdAtom, worldIdAtom } from '../../store/location-atoms'
 import { levelProgressAtom, progressAtom, worldProgressAtom } from '../../store/progress-atoms'
 import { GameProgress } from '../../store/progress-types'
+import { journalAtom } from '../../store/written-proofs-atoms'
 
 /** download the current progress (i.e. what's saved in the browser store) */
 export function downloadProgress(gameId: string, gameProgress: GameProgress) {
@@ -68,12 +69,14 @@ export function ErasePopup () {
   const [gameProgress, setGameProgress] = useAtom(progressAtom)
   const [worldProgress, setWorldProgress] = useAtom(worldProgressAtom)
   const [levelProgress, setLevelProgress] = useAtom(levelProgressAtom)
+  const [, setJournal] = useAtom(journalAtom)
 
   // const { setPage } = useContext(PageContext)
   const [, setPopup] = useAtom(popupAtom)
 
   const eraseProgress = () => {
     setGameProgress(null)
+    setJournal({ clear: true })
     setPopup(null)
     // setPage(0) // TODO: fix me
     // ev.preventDefault() // TODO: this is a hack to prevent the buttons below from opening a link
@@ -81,11 +84,13 @@ export function ErasePopup () {
 
   function eraseLevel () {
     setLevelProgress(null)
+    if (worldId && levelId) setJournal({ removeLevel: { worldId, levelId } })
     setPopup(null)
   }
 
   function eraseWorld () {
     setWorldProgress(null)
+    if (worldId) setJournal({ removeWorld: worldId })
     setPopup(null)
   }
 
