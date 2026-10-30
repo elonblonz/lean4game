@@ -159,20 +159,41 @@ interface Step {
   children: InteractiveGoal[]  // the goals it leaves (none if it closes the goal)
 }
 
-/** One `Step` per goal: what was done to it. */
+/** One `Step` per goal: what was done to it.
+ *
+ * A step's children are the goals that first appear after it. Goals that were already there
+ * before (the other cases, coming back into view when a `·` block or an indented proof ends)
+ * are not its children, or their proofs would be written inside this step's.
+ *
+ * `have h : P := by` followed by the proof of `P` on more indented lines reads as the claim
+ * `have h : P`: its children are `P`, proved by the indented lines, and then the goal with
+ * `h`. (Lean shows only `P` while inside the indented proof.) */
 function stepsByGoal(state: ProofState): Map<string, Step> {
+  const steps = state.steps
   const out = new Map<string, Step>()
-  for (let i = 1; i < state.steps.length; i++) {
-    const before = state.steps[i - 1].goals.map(g => g.goal)
-    const after = state.steps[i].goals.map(g => g.goal)
-    if (!before.length || !state.steps[i].command.trim()) continue
+  const seen = new Set((steps[0]?.goals ?? []).map(g => g.goal.mvarId))
+  const indent = (i: number) => steps[i].command.match(/^\s*/)![0].length
+  for (let i = 1; i < steps.length; i++) {
+    const before = steps[i - 1].goals.map(g => g.goal)
+    const after = steps[i].goals.map(g => g.goal)
+    const raw = steps[i].command
+    if (!before.length || !raw.trim()) { after.forEach(g => seen.add(g.mvarId)); continue }
     const ids = new Set(before.map(g => g.mvarId))
-    out.set(before[0].mvarId!, {
-      command: state.steps[i].command,
-      index: i,
-      goal: before[0],
-      children: after.filter(g => !ids.has(g.mvarId)),
-    })
+    const isNew = (g: InteractiveGoal) => !ids.has(g.mvarId) && !seen.has(g.mvarId)
+    // `· tac` works on the first goal, like `tac`.
+    let command = raw.replace(/^(\s*)[·.]\s+/, '$1')
+    let children = after.filter(isNew)
+    if (/:=\s*by\s*$/.test(raw)) {
+      let end = i
+      while (end + 1 < steps.length && (!steps[end + 1].command.trim() || indent(end + 1) > indent(i))) end++
+      if (end > i) {
+        command = command.replace(/\s*:=\s*by\s*$/, '')
+        children = children.concat(steps[end].goals.map(g => g.goal).filter(isNew).slice(0, 1))
+      }
+    }
+    children.forEach(g => seen.add(g.mvarId))
+    after.forEach(g => seen.add(g.mvarId))
+    out.set(before[0].mvarId!, { command, index: i, goal: before[0], children })
   }
   return out
 }

@@ -1,0 +1,692 @@
+/* The look: a calm, modern skin over the layout in the other stylesheets. Loaded last (see
+   `app.tsx`), so it decides colours, shapes, spacing and motion; the files before it decide
+   what goes where. Everything uses the tokens in `tokens.css`. */
+
+body {
+  background: var(--clr-background);
+  font-feature-settings: "cv11", "ss01";
+  letter-spacing: -0.006em;
+}
+
+/* --- Buttons --------------------------------------------------------------------------- */
+
+.btn {
+  border-radius: var(--radius-sm);
+  padding: .4rem .9rem;
+  font-size: .95rem;
+  font-weight: 550;
+  box-shadow: 0 1px 1px var(--clr-shadow-soft), inset 0 1px 0 rgba(255, 255, 255, .12);
+  transition: background-color var(--dur-fast), color var(--dur-fast), box-shadow var(--dur-fast),
+    border-color var(--dur-fast), transform var(--dur-fast);
+}
+
+.btn:active:not([disabled]):not(.btn-disabled) {
+  transform: translateY(1px);
+}
+
+.btn-inverted {
+  background: var(--clr-surface);
+  color: var(--clr-text-secondary);
+  box-shadow: inset 0 0 0 1px var(--clr-border);
+}
+
+.btn-inverted:hover:not([disabled]):not(.btn-disabled) {
+  background: var(--clr-surface-subtle);
+  color: var(--clr-text);
+}
+
+/* --- App bar: a light bar with a hairline, quiet buttons --------------------------------- */
+
+.app-bar {
+  background: color-mix(in srgb, var(--clr-surface) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--clr-border);
+  box-shadow: none;
+  padding: .55rem 1rem;
+  min-height: 3.25rem;
+  box-sizing: border-box;
+}
+
+.app-bar-title, .app-bar-subtitle {
+  color: var(--clr-text);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.app-bar-left .app-bar-title + .app-bar-title, .app-bar-main .app-bar-title {
+  color: var(--clr-text-secondary);
+  font-weight: 500;
+}
+
+.app-bar .btn, .app-bar .btn-inverted {
+  background: transparent;
+  color: var(--clr-text-secondary);
+  box-shadow: none;
+  padding: .35rem .65rem;
+  font-size: .9rem;
+}
+
+.app-bar .btn:hover:not([disabled]):not(.btn-disabled) {
+  background: var(--clr-surface-subtle);
+  color: var(--clr-text);
+  filter: none;
+}
+
+.app-bar .btn-disabled, .app-bar .btn[disabled] {
+  background: transparent;
+  color: var(--clr-text-faint);
+}
+
+#menu-btn {
+  font-size: 1.1rem;
+  padding: .35rem .6rem;
+}
+
+.menu.dropdown {
+  top: calc(100% + 6px);
+  right: .75rem;
+  padding: .35rem;
+  min-width: 15rem;
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  gap: 1px;
+}
+
+.menu.dropdown .btn {
+  background: transparent;
+  color: var(--clr-text);
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+  font-weight: 450;
+  padding: .45rem .6rem;
+}
+
+.menu.dropdown .btn:hover:not([disabled]):not(.btn-disabled) {
+  background: var(--clr-surface-subtle);
+}
+
+.menu.dropdown .svg-inline--fa {
+  color: var(--clr-text-muted);
+}
+
+/* --- Panels and the dividers between them ----------------------------------------------- */
+
+.chat-panel, .inventory-panel {
+  background: var(--clr-surface);
+}
+
+.exercise-panel, .typewriter-canvas, .typewriter-canvas .typewriter-info {
+  background: var(--clr-background);
+}
+
+.gutter {
+  background-color: var(--clr-border);
+  background-image: none !important;
+  position: relative;
+  transition: background-color var(--dur-fast);
+}
+
+.gutter.gutter-horizontal {
+  cursor: col-resize;
+  /* a hairline that shows a wider grip on hover */
+  background-clip: content-box;
+  padding: 0 4px;
+  margin: 0 -4px;
+  z-index: 5;
+}
+
+.gutter:hover, .gutter:active {
+  background-color: var(--clr-primary);
+}
+
+/* --- Hints, messages and the left panel ------------------------------------------------- */
+
+.chat {
+  margin: 0;
+  padding: .25rem .75rem;
+}
+
+.message {
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  line-height: 1.6;
+}
+
+.message.information, .message.info {
+  background: var(--clr-info-bg);
+  border-color: color-mix(in srgb, var(--clr-primary) 14%, transparent);
+}
+
+.message.warning {
+  border-color: color-mix(in srgb, var(--clr-warning-text) 18%, transparent);
+}
+
+.message.error {
+  border-color: color-mix(in srgb, var(--clr-error-border) 30%, transparent);
+}
+
+.message.deleted-hint {
+  box-shadow: none;
+  border-color: var(--clr-border);
+  background: var(--clr-surface-subtle);
+}
+
+.chat .recent {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--clr-primary) 35%, transparent);
+}
+
+.chat-panel .button-row {
+  border-top: 1px solid var(--clr-border);
+  margin: 0;
+  padding: 0 .5rem;
+}
+
+/* --- The proof: statement, steps and command line --------------------------------------- */
+
+.typewriter-info .proof {
+  margin: .75rem .75rem 0;
+  border: 1px solid var(--clr-border);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-sm);
+  padding: .25rem .5rem .5rem;
+}
+
+.exercise-statement {
+  padding: 1rem .75rem;
+}
+
+.exercise .step {
+  margin: .25rem 0;
+  padding: .5rem .75rem;
+  border-radius: var(--radius);
+}
+
+/* New steps fade in. */
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.proof .step {
+  animation: step-in var(--dur-med) var(--ease) both;
+}
+
+.exercise .step.selected .goal-tabs, .chat .selected {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--clr-primary) 45%, transparent);
+  border-radius: var(--radius);
+}
+
+.hyp-group-title, .goal-title, .goals-section-title {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+  margin-bottom: .2rem;
+}
+
+.hyp-group .hyp-name, .insert-button {
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface-subtle);
+  border-radius: 6px;
+  color: var(--clr-text);
+  transition: border-color var(--dur-fast), background-color var(--dur-fast);
+}
+
+.hyp-group .hyp-name:hover, .insert-button:hover {
+  border-color: color-mix(in srgb, var(--clr-primary) 50%, transparent);
+  background: var(--clr-primary-soft);
+}
+
+.goal-sign line {
+  stroke: var(--clr-primary);
+  stroke-width: 1.5;
+}
+
+/* A command: the line the player entered, joined to the goal above it. */
+.exercise .command, .exercise .failed-command {
+  background: transparent;
+  padding: 0;
+  margin: .5rem 0 1rem;
+  align-items: stretch;
+}
+
+.exercise .command-text {
+  background: var(--clr-surface-subtle);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  padding: .45rem .7rem;
+  color: var(--clr-text);
+  position: relative;
+  padding-left: 1.6rem;
+}
+
+.exercise .command-text::before {
+  content: "›";
+  position: absolute;
+  left: .65rem;
+  top: .3rem;
+  color: var(--clr-primary);
+  font-weight: 700;
+}
+
+.exercise .failed-command .command-text {
+  border-color: color-mix(in srgb, var(--clr-error-border) 40%, transparent);
+  background: var(--clr-error-bg);
+}
+
+.undo-button {
+  background: transparent;
+  color: var(--clr-text-muted);
+  box-shadow: inset 0 0 0 1px var(--clr-border);
+  min-width: 0;
+  padding: 0 .75rem;
+  height: auto;
+  font-size: .85rem;
+}
+
+.undo-button:hover:not([disabled]):not(.btn-disabled) {
+  color: var(--clr-danger-text);
+  background: var(--clr-error-bg);
+}
+
+/* The command line: a floating bar under the proof. */
+.typewriter {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  margin: 0 .75rem .75rem;
+  padding: .4rem;
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.typewriter:focus-within {
+  border-color: color-mix(in srgb, var(--clr-primary) 55%, transparent);
+  box-shadow: var(--shadow), var(--focus-ring);
+}
+
+.typewriter.disabled {
+  background: var(--clr-surface-subtle);
+  box-shadow: none;
+}
+
+.typewriter .typewriter-input-wrapper {
+  background: transparent;
+  padding: .2rem .5rem;
+}
+
+.typewriter form {
+  --typewriter-control-height: 34px;
+  align-items: center;
+}
+
+.typewriter button {
+  min-width: 0;
+  padding: 0 1rem;
+  border-radius: 10px;
+}
+
+/* A goal solved, the level completed */
+.message.information.success {
+  background: var(--clr-success-soft);
+  border-color: color-mix(in srgb, var(--clr-success) 30%, transparent);
+  animation: step-in var(--dur-med) var(--ease) both;
+}
+
+.message.success pre, .message.success p {
+  font-family: var(--ff-primary);
+  font-weight: 550;
+  margin: 0;
+}
+
+/* --- Tabs: segmented controls ------------------------------------------------------------ */
+
+.tab-bar {
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.tab {
+  border-radius: var(--radius-sm);
+  transition: color var(--dur-fast), background-color var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.tab-bar.major, .tab-bar.view-switch {
+  background: var(--clr-surface-subtle);
+  border: 0;
+  border-radius: 10px;
+  padding: 3px;
+  margin: .6rem .75rem .25rem;
+  gap: 2px;
+  font-weight: 550;
+}
+
+.tab-bar.major .tab, .view-switch .tab {
+  font-size: .88rem;
+  padding: .3rem 0;
+  margin: 0;
+  border: 0 !important;
+  color: var(--clr-text-muted);
+  background-image: none;
+}
+
+.tab-bar.major .tab.active, .view-switch .tab.active {
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  box-shadow: 0 1px 2px var(--clr-shadow-soft), 0 0 0 1px var(--clr-border);
+}
+
+.tab-bar.major .tab.new:not(.active), .tab-bar.major .tab.recent:not(.active) {
+  color: var(--clr-text);
+  background: color-mix(in srgb, var(--clr-recent) 70%, transparent);
+}
+
+/* --- Inventory and docs ------------------------------------------------------------------ */
+
+.inventory-list {
+  padding: .35rem .5rem;
+}
+
+.inventory .item {
+  border-bottom: 0;
+  border-radius: var(--radius-sm);
+  padding: .32rem 2rem .32rem .7rem;
+  margin: 1px 0;
+  font-family: var(--ff-code);
+  font-size: 13.5px;
+  color: var(--clr-text);
+}
+
+.inventory .item:hover {
+  background: var(--clr-surface-subtle);
+}
+
+.inventory .item.new {
+  background: var(--clr-new);
+}
+
+.inventory .item.recent {
+  background: var(--clr-recent);
+}
+
+.inventory .item.locked:not(.enabled) {
+  color: var(--clr-text-disabled);
+}
+
+.inventory .item .svg-inline--fa {
+  font-size: .8em;
+  opacity: .7;
+}
+
+.inventory .item .insert-button {
+  top: .3rem;
+  border: 0;
+  background: transparent;
+}
+
+.inventory-panel .documentation {
+  padding: 1.25rem 1.25rem 2rem;
+  box-sizing: border-box;
+  animation: sheet-in var(--dur-med) var(--ease) both;
+  line-height: 1.6;
+}
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.inventory-panel .documentation h1 {
+  font-family: var(--ff-code);
+  font-weight: 600;
+  font-size: 1.15rem;
+  margin: .25rem 0 .75rem;
+  overflow-wrap: anywhere;
+}
+
+.inventory-panel .documentation h2 {
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--clr-text-muted);
+  margin: 1.25rem 0 .5rem;
+}
+
+.documentation .nav-button {
+  margin-top: 0;
+  font-size: 1.1rem;
+  width: auto;
+  background: transparent;
+  box-shadow: none;
+  color: var(--clr-text-muted);
+}
+
+/* How to use a theorem (see `theorem_usage.tsx`) */
+.theorem-usage {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  background: var(--clr-surface-muted);
+  padding: .25rem 1rem .75rem;
+  margin: 1rem 0;
+}
+
+.theorem-usage p, .theorem-usage ul {
+  margin: .5rem 0;
+}
+
+.usage-args {
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.usage-note {
+  color: var(--clr-text-secondary);
+  font-size: .93em;
+}
+
+.usage-command {
+  font: inherit;
+  border: 1px solid color-mix(in srgb, var(--clr-primary) 35%, transparent);
+  background: var(--clr-primary-soft);
+  color: var(--clr-text);
+  border-radius: 6px;
+  padding: 0 .3rem;
+  cursor: pointer;
+  transition: background-color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.usage-command:hover {
+  border-color: var(--clr-primary);
+}
+
+.usage-command code {
+  background: transparent;
+  padding: 0;
+}
+
+.theorems-explained, .lean-signature {
+  margin-top: .5rem;
+}
+
+.theorems-explained > summary, .lean-signature > summary {
+  cursor: pointer;
+  color: var(--clr-link);
+  font-size: .92em;
+  font-weight: 500;
+}
+
+.theorems-explained ul {
+  padding-left: 1.2rem;
+  list-style: disc;
+}
+
+.glossary-list > .theorems-explained {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  padding: .5rem .75rem;
+  margin-bottom: .75rem;
+  background: var(--clr-primary-soft);
+}
+
+.lean-signature code {
+  display: block;
+  margin-top: .4rem;
+  padding: .5rem .6rem;
+  border-radius: var(--radius-sm);
+  background: var(--clr-code-bg);
+  overflow-wrap: anywhere;
+  font-size: 12.5px;
+}
+
+/* Inline code everywhere: soft chips */
+.markdown code, .documentation code, .glossary code {
+  border-radius: 5px;
+}
+
+/* --- Written proofs ---------------------------------------------------------------------- */
+
+.written-proof {
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius);
+  background: var(--clr-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Popups ------------------------------------------------------------------------------ */
+
+.modal-backdrop {
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--dur-med) var(--ease) both;
+}
+
+.modal {
+  border: 1px solid var(--clr-border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  color: var(--clr-text);
+  animation: pop-in var(--dur-med) var(--ease) both;
+}
+
+.modal h2 {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(.98); }
+}
+
+/* --- Mobile ------------------------------------------------------------------------------ */
+
+.mobile-page-switch {
+  border: 0;
+  background: var(--clr-surface-subtle);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mobile-page-switch button {
+  background: transparent;
+  color: var(--clr-text-muted);
+  border-radius: var(--radius-sm);
+  min-height: 34px;
+}
+
+.mobile-page-switch button.active {
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  box-shadow: 0 1px 2px var(--clr-shadow-soft), 0 0 0 1px var(--clr-border);
+}
+
+.level-mobile .typewriter-info .proof {
+  margin: .5rem .5rem 0;
+}
+
+.level-mobile .typewriter {
+  margin: 0 .5rem .5rem;
+}
+
+/* --- Goal tabs and the theorem categories ------------------------------------------------ */
+
+.goal-tabs .tab-bar {
+  border-bottom: 1px solid var(--clr-border);
+}
+
+.goal-tabs .tab {
+  font-size: .8rem;
+  font-weight: 600;
+  padding: .3rem .6rem;
+  margin: 0 .1rem -1px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--clr-text-muted);
+}
+
+.goal-tabs .tab.active, .goal-tabs .tab-bar.current .tab.active {
+  color: var(--clr-text);
+  border-bottom: 2px solid var(--clr-border-strong);
+}
+
+.goal-tabs .tab-bar.current .tab.active {
+  border-bottom-color: var(--clr-primary);
+}
+
+.goal-tab {
+  padding: .5rem 0;
+}
+
+/* The theorems' categories: small pills */
+.inventory .tab-bar:not(.major):not(.view-switch) {
+  border-bottom: 1px solid var(--clr-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: .35rem .75rem .6rem;
+}
+
+.inventory .tab-bar:not(.major):not(.view-switch) .tab {
+  padding: .1rem .6rem;
+  margin: 0;
+  font-size: .85rem;
+  border: 1px solid var(--clr-border);
+  border-radius: 999px;
+  background: var(--clr-surface);
+  background-image: none;
+}
+
+.inventory .tab-bar:not(.major):not(.view-switch) .tab.active {
+  border-color: color-mix(in srgb, var(--clr-primary) 55%, transparent);
+  background: var(--clr-primary-soft);
+  color: var(--clr-text);
+}
+
+.inventory .tab-bar:not(.major):not(.view-switch) .tab.new:not(.active),
+.inventory .tab-bar:not(.major):not(.view-switch) .tab.recent:not(.active) {
+  border-color: transparent;
+  background: var(--clr-recent);
+}
+
+/* The commands in "How to use" are lines of their own. */
+.usage-command, .theorem-usage > p > code:first-child {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  padding: .3rem .55rem;
+  margin: .4rem 0 .25rem;
+  overflow-wrap: anywhere;
+}
+
+.usage-command:active {
+  transform: translateY(1px);
+}

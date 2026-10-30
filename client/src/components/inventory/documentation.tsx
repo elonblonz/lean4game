@@ -9,6 +9,7 @@ import { useGameTranslation } from "../../utils/translation"
 import { navigateAcrossWorldsAtom } from "../../store/location-atoms"
 import { difficultyAtom } from "../../store/progress-atoms"
 import { gameInfoAtom } from "../../store/query-atoms"
+import { TheoremUsageCard } from "./theorem_usage"
 
 /** The `documentation` */
 export function Documentation({ type } : {type : InventoryTab}) {
@@ -60,8 +61,17 @@ export function Documentation({ type } : {type : InventoryTab}) {
         inverted={true} />
     }
     <h1 className="doc">{docTile.displayName}</h1>
-    <p><code>{docEntry?.statement ?? legacyDocEntry?.statement}</code></p>
-    <Markdown>{gT(docEntry?.content ?? legacyDocEntry?.content ?? "")}</Markdown>
+    {docEntry?.usage ? <>
+        <Markdown>{gT(docEntry.content ?? "")}</Markdown>
+        <TheoremUsageCard name={docTile.displayName} usage={docEntry.usage} />
+        <details className="lean-signature">
+          <summary>{t("Lean signature")}</summary>
+          <code>{docEntry.statement}</code>
+        </details>
+      </> : <>
+        <p><code>{docEntry?.statement ?? legacyDocEntry?.statement}</code></p>
+        <Markdown>{gT(docEntry?.content ?? legacyDocEntry?.content ?? "")}</Markdown>
+      </>}
     {/* TODO: The condition below should be updated so that the section
     is displayed whenever it's non-empty. */}
     {docTile.proven && <>

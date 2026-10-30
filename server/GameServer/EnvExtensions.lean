@@ -79,10 +79,37 @@ structure InventoryTemplate where
   readsAs: Option String := none
   deriving ToJson, Repr, Inhabited
 
+/-- An argument the player gives a theorem, e.g. `h` with `x ∈ S`. -/
+structure UsageArg where
+  name : String
+  /-- Its type: for a proof, the statement it proves. -/
+  type : String
+  /-- Whether it is a proof (rather than an object such as a set or a function). -/
+  proof : Bool := false
+  deriving ToJson, FromJson, Repr, Inhabited
+
+/-- How to use a theorem in a proof, worked out from its signature: e.g. for
+`mem_image_of_mem (f : A → B) {S : Set A} {x : A} (h : x ∈ S) : f x ∈ f '' S`, the call is
+`mem_image_of_mem f h`, the player gives `f` and `h`, and Lean works out `S` and `x`. -/
+structure TheoremUsage where
+  /-- The theorem applied to its explicit arguments. -/
+  call : String
+  /-- The explicit arguments, in order. -/
+  args : Array UsageArg := #[]
+  /-- The implicit arguments that aren't types: Lean works them out. -/
+  inferred : Array String := #[]
+  /-- What `call` proves. -/
+  conclusion : String
+  /-- `"iff"` or `"eq"` if the conclusion is a `↔` or `=`, so that `rewrite` can use it. -/
+  rel : String := ""
+  deriving ToJson, FromJson, Repr, Inhabited
+
 /-- A full inventory item including the processing by `MakeGame`, which creates these
 from the `InventoryTemplate`s and modifies them. -/
 structure InventoryItem extends InventoryTemplate where
   statement: String := ""
+  /-- Only for theorems: how to use it (see `TheoremUsage`). -/
+  usage: Option TheoremUsage := none
   deriving ToJson, Repr, Inhabited
 
 /-- A reduced variant of `InventoryItem` which is used for the tiles in the doc -/

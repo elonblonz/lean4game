@@ -3,10 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useAtom } from 'jotai';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
+import '@fontsource-variable/inter';
 
 // The global stylesheets, in this order (later ones win). Components import theirs too, which
 // doesn't change the order: a stylesheet goes where it is first imported.
@@ -26,6 +23,9 @@ import "./css/world_tree.css"
 import "./css/markdown.css"
 import "./css/inventory.css"
 import "./css/learning.css"
+import "./css/written_proof.css"
+// The look (colours, shapes, motion) over the layout above: last, so it wins.
+import "./css/look.css"
 
 import i18n from './i18n';
 import { Popup } from './components/popup/popup';
@@ -38,11 +38,13 @@ import { hashSegmentsAtom } from './store/location-atoms';
 import { langNavOpenAtom, navOpenAtom } from './store/navigation-atoms';
 import { popupAtom } from './store/popup-atoms';
 
-/** Colours that MUI and Monaco need as literals. Keep in sync with the dark palette in `css/tokens.css`. */
-const DARK_BACKGROUND = '#1e2127'
-const DARK_SURFACE = '#252830'
-const DARK_TEXT = '#e6e8ec'
-const PRIMARY = '#1976d2'
+/** Colours that MUI and Monaco need as literals. Keep in sync with the palettes in `css/tokens.css`. */
+const DARK_BACKGROUND = '#0f1115'
+const DARK_SURFACE = '#16181d'
+const DARK_TEXT = '#ececf1'
+const PRIMARY = '#5b5bd6'
+const DARK_PRIMARY = '#6363e0'
+const FONT = '"Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
 
 function App({ children }: { children?: React.ReactNode }) {
 
@@ -140,13 +142,15 @@ function App({ children }: { children?: React.ReactNode }) {
   const muiTheme = useMemo(() => createTheme({
     palette: darkMode ? {
       mode: 'dark',
-      primary: { main: PRIMARY },
+      primary: { main: DARK_PRIMARY },
       background: { default: DARK_BACKGROUND, paper: DARK_SURFACE },
       text: { primary: DARK_TEXT },
     } : {
       mode: 'light',
       primary: { main: PRIMARY },
     },
+    typography: { fontFamily: FONT, button: { textTransform: 'none', fontWeight: 550 } },
+    shape: { borderRadius: 8 },
   }), [darkMode])
 
   return (

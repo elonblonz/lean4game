@@ -585,7 +585,7 @@ describe('Basic Lean4Game Features', () => {
       cy.contains('.preferences-category', 'Appearance').find('.MuiSelect-select').first().click()
       cy.get('li[data-value="dark"]').click()
       cy.get('html').should('have.attr', 'data-theme', 'dark')
-      cy.get('body').should('have.css', 'background-color', 'rgb(30, 33, 39)')
+      cy.get('body').should('have.css', 'background-color', 'rgb(15, 17, 21)')
       // Escape closes the popup.
       cy.get('body').type('{esc}')
       cy.get('[role="dialog"]').should('not.exist')

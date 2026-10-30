@@ -1,10 +1,6 @@
 import * as React from 'react'
 import { useEffect } from 'react'
 
-import '@fontsource/roboto/300.css'
-import '@fontsource/roboto/400.css'
-import '@fontsource/roboto/500.css'
-import '@fontsource/roboto/700.css'
 import '../../css/level.css'
 import { useGameTranslation } from '../../utils/translation'
 import { useAtom } from 'jotai'

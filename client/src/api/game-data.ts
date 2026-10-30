@@ -91,4 +91,20 @@ export interface Doc {
   category: string,
   /** See `InventoryTile.readsAs`. */
   readsAs?: string|null,
+  /** Only for theorems: how to use it, worked out from its signature. */
+  usage?: TheoremUsage|null,
+}
+
+/** See `TheoremUsage` in the server's `EnvExtensions.lean`. */
+export interface TheoremUsage {
+  /** The theorem applied to its explicit arguments, e.g. `mem_image_of_mem f h`. */
+  call: string,
+  /** The explicit arguments in order; for a proof, `type` is what it proves. */
+  args: { name: string, type: string, proof?: boolean }[],
+  /** Arguments Lean works out by itself. */
+  inferred: string[],
+  /** What `call` proves. */
+  conclusion: string,
+  /** `iff` or `eq` if `rewrite` can use the theorem. */
+  rel: string,
 }
