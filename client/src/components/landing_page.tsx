@@ -1,9 +1,5 @@
 import * as React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
 import '../css/landing_page.css'
 import bgImage from '../assets/bg.jpg'
 import { Markdown } from './markdown';

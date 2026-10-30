@@ -60,9 +60,11 @@ function Error({error, typewriterMode} : {error : InteractiveDiagnostic, typewri
   }
 
   const messageString = messageToString(message);
+  // "level completed! 🎉" and "intermediate goal solved! 🎉" (in any language)
+  const success = error.severity === DiagnosticSeverity.Information && messageString.includes('🎉')
 
   return (messageString.trim().length > 0 && (
-  <div className={severityClass + ' ml1 message'}>
+  <div className={severityClass + ' ml1 message' + (success ? ' success' : '')}>
     {!typewriterMode && <p className="mv2">{title}</p>}
     <pre className="font-code pre-wrap">
       <p>{messageString}</p>
