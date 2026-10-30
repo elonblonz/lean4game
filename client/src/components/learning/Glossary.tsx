@@ -7,6 +7,7 @@ import { Markdown } from '../markdown'
 import { useGameTranslation } from '../../utils/translation'
 import { GlossaryEntry, glossaryQueryAtom, glossaryTilesAtom } from '../../store/learning-atoms'
 import { InventoryTab } from '../../store/inventory-atoms'
+import { TheoremsExplained, TheoremUsageCard } from '../inventory/theorem_usage'
 
 const TYPE_TITLE: Record<InventoryTab, string> = {
   [InventoryTab.tactic]: "Tactics",
@@ -68,6 +69,7 @@ export function Glossary() {
       {isLoading && <CircularProgress size="1em" />}
     </div>
     <div className="glossary-list">
+      {!query && <TheoremsExplained />}
       {Object.values(InventoryTab).map(type => {
         const ofType = results.filter(entry => entry.type === type)
         if (!ofType.length) return null
@@ -90,8 +92,9 @@ function GlossaryItem({ entry, loading }: { entry: GlossaryEntry, loading: boole
       <span className="glossary-type">{t(TYPE_LABEL[entry.type])}{tile.category && tile.category !== "📖︎" ? ` · ${tile.category}` : ''}</span>
       {locked && <span className="glossary-type">{t("Not unlocked yet")}</span>}
     </summary>
-    {doc?.statement && <p><code>{doc.statement}</code></p>}
+    {doc?.statement && !doc.usage && <p><code>{doc.statement}</code></p>}
     {doc ? <Markdown>{gT(doc.content ?? '')}</Markdown> : loading && <p className="glossary-missing">{t("Loading…")}</p>}
+    {doc?.usage && <TheoremUsageCard name={tile.displayName} usage={doc.usage} />}
     {doc?.readsAs && <p className="glossary-reads-as">{t("In a written proof:")} <em>{gT(doc.readsAs)}</em></p>}
   </details>
 }

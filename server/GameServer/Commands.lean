@@ -569,6 +569,30 @@ elab "Dependency" s:Parser.dependency : command => do
       pure {game with worlds := {game.worlds with edges := game.worlds.edges.push (source, target)}}
     source? := some target
 
+/-- How to use the theorem `name`, called `displayName` in the game (see `TheoremUsage`). -/
+def getTheoremUsage (name : Name) (displayName : String) : CommandElabM TheoremUsage :=
+  liftTermElabM do
+    let info ← getConstInfo name
+    forallTelescope info.type fun xs body => do
+      let mut args : Array UsageArg := #[]
+      let mut inferred : Array String := #[]
+      for x in xs do
+        let decl ← x.fvarId!.getDecl
+        let argName := decl.userName.eraseMacroScopes.toString
+        if decl.binderInfo.isInstImplicit then continue
+        if decl.binderInfo.isExplicit then
+          args := args.push { name := argName, type := toString (← ppExpr decl.type),
+                              proof := ← isProp decl.type }
+        -- Types (`{A : Type}`) go without saying.
+        else if !(← whnfR decl.type).isSort then
+          inferred := inferred.push argName
+      let rel := if body.isAppOfArity ``Iff 2 then "iff"
+        else if body.isAppOfArity ``Eq 3 then "eq" else ""
+      return {
+        call := " ".intercalate (displayName :: args.toList.map (·.name))
+        args, inferred, rel
+        conclusion := toString (← ppExpr body) }
+
 /-- Build the game. This command will precompute various things about the game, such as which
 tactics are available in each level etc. -/
 elab "MakeGame" : command => do
@@ -599,6 +623,7 @@ elab "MakeGame" : command => do
         content := content
         -- Add the lemma statement to the doc
         statement := (← getStatementString name)
+        usage := ← try pure (some (← getTheoremUsage name item.displayName)) catch _ => pure none
       })
     | _ =>
       modifyEnv (inventoryExt.addEntry · { item with
