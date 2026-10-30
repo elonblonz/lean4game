@@ -120,7 +120,11 @@ export const deleteProofFromStepAtom = atom(null, (get, set, step: number) => {
   // Forget which hidden hints were shown for the deleted steps.
   set(helpAtom, new Map(Array.from(help).filter(([i]) => i < step)))
 
-  set(codeAtom, code.split("\n").slice(0, Math.max(0, step - 1)).join("\n"))
+  // The server skips blank lines, so step `i` needn't be on line `i - 1`: use the line it
+  // reports (the line after the step's command; step 0 is at the start of the proof).
+  const start = proof?.steps[0]?.line, end = proof?.steps[step]?.line
+  const keep = start != null && end != null ? end - start - 1 : step - 1
+  set(codeAtom, code.split("\n").slice(0, Math.max(0, keep)).join("\n"))
 })
 
 /** If a level has a template, the user is forced to use editor mode */

@@ -9,6 +9,8 @@ import { gameInfoAtom } from '../../store/query-atoms'
 import { journalAtom, JournalEntry } from '../../store/written-proofs-atoms'
 import { downloadLatex, WrittenProofView } from '../written_proof/WrittenProof'
 import { toLatexDocument } from '../written_proof/written-proof'
+import { worldOrder } from '../../utils/world-order'
+import { CircularProgress } from '@mui/material'
 
 /** All the proofs completed in this game, written out, by world: to read again or download
  * as one LaTeX document. */
@@ -18,13 +20,15 @@ export function ProofsPopup() {
   const [journal] = useAtom(journalAtom)
   const [{ data: gameInfo }] = useAtom(gameInfoAtom)
 
-  // In the order of the worlds, then of the levels.
-  const worldIds = Object.keys(gameInfo?.worlds?.nodes ?? {})
-  const order = (e: JournalEntry) => {
+  // In the order of the worlds, then of the levels. Worlds the game no longer has (proofs
+  // saved by an older version) come last, each kept together.
+  const worldIds = worldOrder(gameInfo?.worlds)
+  const worldRank = (e: JournalEntry) => {
     const w = worldIds.indexOf(e.worldId)
-    return (w < 0 ? worldIds.length : w) * 1000 + e.levelId
+    return w < 0 ? worldIds.length : w
   }
-  const entries = Object.values(journal).sort((a, b) => order(a) - order(b))
+  const entries = Object.values(journal).sort((a, b) =>
+    worldRank(a) - worldRank(b) || a.worldId.localeCompare(b.worldId) || a.levelId - b.levelId)
   const worldTitle = (id: string) => gT(gameInfo?.worlds?.nodes[id]?.title ?? id)
   const groups: { worldId: string, entries: JournalEntry[] }[] = []
   for (const e of entries) {
@@ -40,7 +44,7 @@ export function ProofsPopup() {
 
   return <div className="proofs-popup">
     <h2>{t('My proofs')}</h2>
-    {entries.length === 0 ?
+    {!gameInfo ? <CircularProgress /> : entries.length === 0 ?
       <p>{t('Proofs you complete appear here, written out as a mathematician would write them.')}</p> :
       <>
         <p>{t('Every proof you have completed, written out.')}</p>

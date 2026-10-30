@@ -53,7 +53,9 @@ export function Typewriter() {
       <div className="pusher" />
       <div className='proof' ref={proofPanelRef}>
         <ExerciseStatement showLeanStatement={true} />
-        {proof?.steps.map((step, i) => <ProofStep key={i} step={step} idx={i} />)}
+        {/* Keyed by the command too, so a step replaced after an undo starts afresh (e.g. on
+            its first goal tab). */}
+        {proof?.steps.map((step, i) => <ProofStep key={`${i}:${step.command}`} step={step} idx={i} />)}
         {/* Also when an older proof state is still shown: it's out of date. */}
         {failed ? <ProofStateError retry={refetch} />
           : !proof && <div className="centered-spinner"><CircularProgress /></div>}

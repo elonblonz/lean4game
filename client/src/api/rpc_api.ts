@@ -41,6 +41,9 @@ export interface InteractiveGoalsWithHints {
   goals: InteractiveGoalWithHints[];
   command: string;
   diags: InteractiveDiagnostic[];
+  /** The (0-based) document line after this step's command. */
+  line?: number;
+  column?: number;
 }
 
 /**
